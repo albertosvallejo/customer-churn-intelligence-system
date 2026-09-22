@@ -3,10 +3,18 @@ import json
 from datetime import datetime, timezone
 from math import isnan
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
-from evidence.phase7_artifacts import SYNTHETIC_WARNING, phase7_namespace_dir, resolve_phase7_mode, resolve_synthetic_runtime_artifact
-from evidence.phase7_integration import load_integrated_actions, load_phase7_action_history
+from evidence.phase7_artifacts import (
+    SYNTHETIC_WARNING,
+    phase7_namespace_dir,
+    resolve_phase7_mode,
+    resolve_synthetic_runtime_artifact,
+)
+from evidence.phase7_integration import (
+    load_integrated_actions,
+    load_phase7_action_history,
+)
 
 PHASE7_REPORTING_POLL_MS = 300_000
 DASHBOARD_ROUTE = "/customer-churn/dashboard"
@@ -37,7 +45,7 @@ _KPI_LABEL_OVERRIDES = {
 }
 
 
-def _read_json(path: Path) -> Dict[str, Any]:
+def _read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
@@ -78,7 +86,7 @@ def _title_case_kpi(value: Any) -> str:
     return text.replace("_", " ").title()
 
 
-def _proposal_display_name(record: Dict[str, Any], integrated_actions: List[Dict[str, Any]]) -> str:
+def _proposal_display_name(record: dict[str, Any], integrated_actions: list[dict[str, Any]]) -> str:
     proposal_id = str(record.get("proposal_id") or "").strip()
     for action in integrated_actions:
         if str(action.get("proposal_id") or "").strip() == proposal_id:
@@ -100,7 +108,7 @@ def _result_label(verdict: str) -> str:
     return mapping.get(str(verdict or ""), str(verdict or "—").replace("_", " ").title())
 
 
-def _status_label(record: Dict[str, Any]) -> str:
+def _status_label(record: dict[str, Any]) -> str:
     status = str(record.get("status") or "").lower()
     verdict = str(record.get("verdict") or "")
     if status != "completed":
@@ -137,7 +145,7 @@ def _format_dt(value: Any) -> str:
     return dt.strftime("%d %b %Y · %H:%M")
 
 
-def _load_latest_phase6_kpi_status(project_root: Path, mode: str | None = None) -> Dict[str, Any]:
+def _load_latest_phase6_kpi_status(project_root: Path, mode: str | None = None) -> dict[str, Any]:
     resolved_mode = resolve_phase7_mode(mode)
     if resolved_mode == "synthetic_demo":
         return _read_json(resolve_synthetic_runtime_artifact(project_root, "phase6_kpi_status"))
@@ -149,14 +157,14 @@ def _load_latest_phase6_kpi_status(project_root: Path, mode: str | None = None) 
     return _read_json(candidates[-1])
 
 
-def _safe_load_integrated_actions(project_root: Path, run_date: str | None, mode: str | None) -> Dict[str, Any] | None:
+def _safe_load_integrated_actions(project_root: Path, run_date: str | None, mode: str | None) -> dict[str, Any] | None:
     try:
         return load_integrated_actions(project_root, run_date, mode)
-    except Exception:
+    except Exception:  # noqa: BLE001 - optional view-model fallback
         return None
 
 
-def _default_pending_chip(kpi_label: str) -> Dict[str, Any]:
+def _default_pending_chip(kpi_label: str) -> dict[str, Any]:
     return {
         "kpi": kpi_label,
         "subtitle": "Collecting data",
@@ -168,7 +176,7 @@ def _default_pending_chip(kpi_label: str) -> Dict[str, Any]:
     }
 
 
-def _default_empty_chip(kpi_label: str, subtitle: str = "No active proposals") -> Dict[str, Any]:
+def _default_empty_chip(kpi_label: str, subtitle: str = "No active proposals") -> dict[str, Any]:
     return {
         "kpi": kpi_label,
         "subtitle": subtitle,
@@ -180,12 +188,12 @@ def _default_empty_chip(kpi_label: str, subtitle: str = "No active proposals") -
     }
 
 
-def _build_kpi_chip_rows(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    grouped: Dict[str, List[Dict[str, Any]]] = {}
+def _build_kpi_chip_rows(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
     for record in records:
         grouped.setdefault(_title_case_kpi(record.get("primary_kpi")), []).append(record)
 
-    chips: List[Dict[str, Any]] = []
+    chips: list[dict[str, Any]] = []
     for kpi_label, rows in grouped.items():
         if kpi_label == "—":
             chips.append(
@@ -266,8 +274,8 @@ def _build_kpi_chip_rows(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return chips
 
 
-def _build_campaign_rows(records: List[Dict[str, Any]], integrated_actions: List[Dict[str, Any]], generated_at: str) -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
+def _build_campaign_rows(records: list[dict[str, Any]], integrated_actions: list[dict[str, Any]], generated_at: str) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for record in records:
         result = _result_label(str(record.get("verdict") or ""))
         test_result = "—" if result == "Not enough data yet" else _format_percent(record.get("conversion_lift"))
@@ -289,7 +297,7 @@ def _build_campaign_rows(records: List[Dict[str, Any]], integrated_actions: List
     return rows
 
 
-def _coerce_guardrail_risk(event: Dict[str, Any]) -> bool | None:
+def _coerce_guardrail_risk(event: dict[str, Any]) -> bool | None:
     if not _is_missing(event.get("guardrail_risk")):
         return bool(event.get("guardrail_risk"))
     if not _is_missing(event.get("guardrail")):
@@ -299,7 +307,7 @@ def _coerce_guardrail_risk(event: Dict[str, Any]) -> bool | None:
     return None
 
 
-def _coerce_history_period(event: Dict[str, Any], matching_action: Dict[str, Any] | None = None) -> tuple[str, str]:
+def _coerce_history_period(event: dict[str, Any], matching_action: dict[str, Any] | None = None) -> tuple[str, str]:
     launch_value = _coalesce(
         event.get("launch_at"),
         event.get("request_ts"),
@@ -329,7 +337,7 @@ def _coerce_history_period(event: Dict[str, Any], matching_action: Dict[str, Any
     return launch_at, closed_at
 
 
-def _history_result_label(event: Dict[str, Any]) -> str:
+def _history_result_label(event: dict[str, Any]) -> str:
     direct_result = _coalesce(event.get("result"))
     if direct_result is not None:
         return str(direct_result).replace("_", " ").title()
@@ -348,7 +356,7 @@ def _history_result_label(event: Dict[str, Any]) -> str:
     return str(fallback).replace("_", " ").title() if fallback is not None else "—"
 
 
-def _history_status_label(event: Dict[str, Any]) -> str:
+def _history_status_label(event: dict[str, Any]) -> str:
     direct_status = _coalesce(event.get("status"))
     lifecycle = str(_coalesce(event.get("lifecycle_state"), direct_status) or "").lower()
     decision_status = str(_coalesce(event.get("decision_status")) or "").lower()
@@ -368,7 +376,7 @@ def _history_status_label(event: Dict[str, Any]) -> str:
     return str(_coalesce(event.get("status"), event.get("lifecycle_state"), event.get("decision_type")) or "—").replace("_", " ").title()
 
 
-def _history_test_result(event: Dict[str, Any], matching_action: Dict[str, Any] | None) -> str:
+def _history_test_result(event: dict[str, Any], matching_action: dict[str, Any] | None) -> str:
     source_value = _coalesce(
         event.get("test_result"),
         event.get("conversion_lift"),
@@ -379,7 +387,7 @@ def _history_test_result(event: Dict[str, Any], matching_action: Dict[str, Any] 
     return _format_percent(source_value)
 
 
-def _history_guardrail_payload(event: Dict[str, Any], matching_action: Dict[str, Any] | None) -> tuple[bool | None, str, str]:
+def _history_guardrail_payload(event: dict[str, Any], matching_action: dict[str, Any] | None) -> tuple[bool | None, str, str]:
     guardrail_risk = _coalesce(event.get("guardrail_risk"), event.get("guardrail"), event.get("guardrail_breach"), (matching_action or {}).get("guardrail_breach"))
     if _is_missing(guardrail_risk):
         return None, "—", ""
@@ -387,8 +395,8 @@ def _history_guardrail_payload(event: Dict[str, Any], matching_action: Dict[str,
     return is_risk, ("Risk detected" if is_risk else "No risks detected"), ("Risk detected in a monitored guardrail metric." if is_risk else "All monitored guardrails remained within threshold.")
 
 
-def _build_history_rows(history: List[Dict[str, Any]], integrated_actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
+def _build_history_rows(history: list[dict[str, Any]], integrated_actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for event in history:
         proposal_id = str(event.get("proposal_id") or "").strip()
         matching_action = next((action for action in integrated_actions if str(action.get("proposal_id") or "").strip() == proposal_id), None)
@@ -417,7 +425,7 @@ def _build_history_rows(history: List[Dict[str, Any]], integrated_actions: List[
     return rows
 
 
-def build_phase7_reporting_view_model(project_root: Path, run_date: str | None = None, mode: str | None = None) -> Dict[str, Any]:
+def build_phase7_reporting_view_model(project_root: Path, run_date: str | None = None, mode: str | None = None) -> dict[str, Any]:
     resolved_mode = resolve_phase7_mode(mode)
     kpi_payload = _load_latest_phase6_kpi_status(project_root, resolved_mode)
     integrated = _safe_load_integrated_actions(project_root, run_date, resolved_mode) or {"actions": []}
@@ -629,7 +637,7 @@ def _test_result_tone(value: str) -> str:
     text = str(value or "").strip()
     if text.startswith("+"):
         return "positive"
-    if text.startswith("-") or text.startswith("−"):
+    if text.startswith(("-", "−")):
         return "negative"
     return "neutral"
 
@@ -645,7 +653,7 @@ def _status_tone(value: str) -> str:
     return "neutral"
 
 
-def _guardrail_html(row: Dict[str, Any]) -> str:
+def _guardrail_html(row: dict[str, Any]) -> str:
     label = str(row.get("guardrail") or row.get("guardrail_status") or "—")
     if label == "—":
         return '<span class="dash">—</span>'
@@ -656,7 +664,7 @@ def _guardrail_html(row: Dict[str, Any]) -> str:
     return f"<span class='pill {tone}'>{html.escape(label)}</span>"
 
 
-def _render_campaign_rows(rows: List[Dict[str, Any]]) -> str:
+def _render_campaign_rows(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return "<tr><td colspan='7'>No campaign rows found.</td></tr>"
     rendered = []
@@ -680,7 +688,7 @@ def _render_campaign_rows(rows: List[Dict[str, Any]]) -> str:
     return "".join(rendered)
 
 
-def _render_history_rows(rows: List[Dict[str, Any]]) -> str:
+def _render_history_rows(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return "<div class='empty-state'>No visible Phase 7 history events yet.</div>"
     rendered = []
@@ -709,7 +717,7 @@ def _render_history_rows(rows: List[Dict[str, Any]]) -> str:
     )
 
 
-def _render_synthetic_banner(view_model: Dict[str, Any]) -> str:
+def _render_synthetic_banner(view_model: dict[str, Any]) -> str:
     warning = view_model.get("warning")
     if not warning and view_model.get("mode") == "synthetic_demo":
         warning = SYNTHETIC_WARNING

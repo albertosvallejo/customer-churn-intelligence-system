@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import argparse
 import json
 import logging
-import argparse
 import sys
 from pathlib import Path
 
@@ -12,7 +12,6 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from evidence.catalog_builder import build_and_write_catalog
-
 
 logging.basicConfig(
     level=logging.INFO,

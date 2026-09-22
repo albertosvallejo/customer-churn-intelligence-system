@@ -43,7 +43,6 @@ from statsmodels.stats.proportion import proportions_ztest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src", "pipeline"))
 import ab_testing_framework as abf
 
-
 # ---------------------------------------------------------------------------
 # Utilidades de construcción de datos deterministas
 # ---------------------------------------------------------------------------

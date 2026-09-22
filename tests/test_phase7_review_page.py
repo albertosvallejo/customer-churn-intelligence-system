@@ -12,7 +12,11 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from api.phase7_review_page import build_phase7_review_page_view_model
-from evidence.phase7_integration import build_integrated_actions, evaluate_integrated_action, record_phase7_action_decision
+from evidence.phase7_integration import (
+    build_integrated_actions,
+    evaluate_integrated_action,
+    record_phase7_action_decision,
+)
 
 
 class TestPhase7ReviewPage(unittest.TestCase):

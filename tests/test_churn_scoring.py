@@ -10,16 +10,20 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from models.churn_scoring import apply_risk_tier, attach_retention_rules, score_dataframe
+from models.churn_scoring import (
+    apply_risk_tier,
+    attach_retention_rules,
+    score_dataframe,
+)
 
 
 class TestChurnScoring(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.package_path = sorted((PROJECT_ROOT / "models").glob("churn_scoring_package_*.joblib"))[-1]
+        cls.package_path = max((PROJECT_ROOT / "models").glob("churn_scoring_package_*.joblib"))
         cls.bundle = joblib.load(cls.package_path)
         cls.metadata = cls.bundle["metadata"]
-        cls.feature_path = sorted((PROJECT_ROOT / "data" / "processed").glob("churn_features_*.parquet"))[-1]
+        cls.feature_path = max((PROJECT_ROOT / "data" / "processed").glob("churn_features_*.parquet"))
         feature_df = pd.read_parquet(cls.feature_path)
         leakage_columns = [
             'customer_unique_id', 'snapshot_key', 'snapshot_date', 'first_purchase_timestamp',

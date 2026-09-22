@@ -1,7 +1,7 @@
+import json
 import logging
 import os
 from pathlib import Path
-import json
 
 import pandas as pd
 from sqlalchemy import create_engine, text

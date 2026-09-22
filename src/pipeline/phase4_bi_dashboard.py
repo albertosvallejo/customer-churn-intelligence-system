@@ -44,7 +44,7 @@ def _load_inputs() -> dict[str, pd.DataFrame | dict]:
     }
 
 
-def _fmt_int(value: float | int) -> str:
+def _fmt_int(value: float) -> str:
     return f"{int(value):,}"
 
 

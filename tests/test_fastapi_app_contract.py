@@ -15,11 +15,15 @@ os.environ["CHURN_DB_URL"] = f"sqlite:///{Path(_tmpdir.name) / 'test_ops.sqlite'
 os.environ["PHASE7_REVIEW_TOKEN"] = "phase7-fastapi-token"
 os.environ["APP_ENV"] = "test"
 
-import api.churn_service as churn_service
+from fastapi.testclient import TestClient
+
+from api import churn_service
 from api.fastapi_app import app
 from evidence.phase7_artifacts import REAL_MODE
-from evidence.phase7_integration import build_integrated_actions, load_integrated_actions
-from fastapi.testclient import TestClient
+from evidence.phase7_integration import (
+    build_integrated_actions,
+    load_integrated_actions,
+)
 
 
 class TestFastApiAppContract(unittest.TestCase):
@@ -29,10 +33,7 @@ class TestFastApiAppContract(unittest.TestCase):
     def setUpClass(cls):
         cls._previous_mode = os.environ.pop("MODE", None)
         churn_service.DEFAULT_DB_URL = os.environ["CHURN_DB_URL"]
-        try:
-            churn_service._ops_engine().dispose()
-        except Exception:
-            pass
+        churn_service._ops_engine().dispose()
         churn_service._ops_engine.cache_clear()
         cls.client = TestClient(app)
         cls._prepare_phase7_fixture(cls.RUN_DATE)
@@ -84,7 +85,7 @@ class TestFastApiAppContract(unittest.TestCase):
 
     def test_public_html_routes_return_200_without_token(self):
         for path, marker in [
-            (f"/customer-churn/dashboard?run_date={self.RUN_DATE}", "Churn Campaigns Dashboard"),
+            (f"/customer-churn/dashboard?run_date={self.RUN_DATE}", "CHURN CAMPAIGNS DASHBOARD"),
             (f"/customer-churn/tested-actions-approval?run_date={self.RUN_DATE}", "Tested Actions Approval"),
             (f"/customer-churn/new-actions-testing?run_date={self.RUN_DATE}", "New Actions Approval"),
         ]:

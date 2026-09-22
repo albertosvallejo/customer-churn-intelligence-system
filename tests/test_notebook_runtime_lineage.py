@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import joblib
 import pandas as pd
@@ -8,7 +8,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT / 'src') not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT / 'src'))
 
-from notebook_runtime import preserve_existing_bundle_lineage, select_consistent_scoring_bundle
+from notebook_runtime import (
+    preserve_existing_bundle_lineage,
+    select_consistent_scoring_bundle,
+)
 
 
 def test_select_consistent_scoring_bundle_prefers_compatibility_artifacts_when_historical_lineage_is_unverified(tmp_path):

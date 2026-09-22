@@ -245,7 +245,7 @@ def summarize_campaign_kpis(
         grouped = agg.to_dict(orient="records")
 
     totals = {
-        "actions": int(len(frame)),
+        "actions": len(frame),
         "closed_evaluations": int(frame["closed_evaluation"].sum()),
         "treated_closed_evaluations": int((closed["holdout"] == False).sum()) if not closed.empty else 0,
         "holdout_closed_evaluations": int((closed["holdout"] == True).sum()) if not closed.empty else 0,

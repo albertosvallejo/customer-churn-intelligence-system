@@ -1,14 +1,12 @@
 import logging
+import math
 import os
 import secrets
 from datetime import datetime, timezone
 from http import HTTPStatus
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
-import math
-
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -68,10 +66,11 @@ def _json_default(value: Any) -> Any:
     if hasattr(value, "tolist") and not isinstance(value, (str, bytes, bytearray)):
         return value.tolist()
     try:
-        if pd.isna(value):
-            return None
-    except Exception:
-        pass
+        is_missing = bool(pd.isna(value))
+    except (TypeError, ValueError):
+        is_missing = False
+    if is_missing:
+        return None
     if hasattr(value, "item"):
         return value.item()
     return value
@@ -201,7 +200,7 @@ def explainability_latest(customer_id: str | None = None, risk_level: str | None
         payload = churn_service._load_latest_explainability(customer_id=customer_id, risk_level=risk_level, limit=limit)
     except FileNotFoundError as exc:
         return _not_found(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected explainability error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -222,7 +221,7 @@ def health_events() -> JSONResponse:
                 "timestamp": _utc_now_iso(),
             },
         )
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected event health error", exc)
 
 
@@ -230,7 +229,7 @@ def health_events() -> JSONResponse:
 def agent_status() -> JSONResponse:
     try:
         payload = churn_service._load_agent_status()
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected agent status error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -239,7 +238,7 @@ def agent_status() -> JSONResponse:
 def agent_status_daily(refresh: bool = False) -> JSONResponse:
     try:
         payload = churn_service._load_phase5_daily_status(refresh=refresh)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected phase5 daily status error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -248,7 +247,7 @@ def agent_status_daily(refresh: bool = False) -> JSONResponse:
 def agent_status_shadow_monitor(refresh: bool = False) -> JSONResponse:
     try:
         payload = churn_service._load_phase5_shadow_monitor_status(refresh=refresh)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected phase5 shadow monitor error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -257,7 +256,7 @@ def agent_status_shadow_monitor(refresh: bool = False) -> JSONResponse:
 def agent_status_phase5(refresh: bool = False) -> JSONResponse:
     try:
         payload = churn_service._load_phase5_operational_snapshot(refresh=refresh)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected phase5 operational snapshot error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -282,7 +281,7 @@ def phase6_proposals_latest(run_date: str | None = None, refresh: bool = False) 
         return _not_found(exc)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 6 proposal error", exc)
     return _json_response(HTTPStatus.OK, response_payload)
 
@@ -291,7 +290,7 @@ def phase6_proposals_latest(run_date: str | None = None, refresh: bool = False) 
 def phase6_action_history_latest() -> JSONResponse:
     try:
         history = load_action_history(PROJECT_ROOT)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 6 action-history error", exc)
     return _json_response(HTTPStatus.OK, {"status": "ok", "record_count": len(history), "records": history, "timestamp": _utc_now_iso()})
 
@@ -300,7 +299,7 @@ def phase6_action_history_latest() -> JSONResponse:
 def phase6_kpis_latest(refresh: bool = False) -> JSONResponse:
     try:
         payload = build_kpi_status_view(PROJECT_ROOT) if refresh else load_latest_kpi_status(PROJECT_ROOT)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 6 KPI status error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -311,7 +310,7 @@ def phase6_n8n_payload_latest(run_date: str | None = None, refresh: bool = False
         payload = build_n8n_action_payload(PROJECT_ROOT, run_date=run_date) if refresh else load_latest_n8n_action_payload(PROJECT_ROOT)
     except FileNotFoundError as exc:
         return _not_found(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 6 n8n payload error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -320,7 +319,7 @@ def phase6_n8n_payload_latest(run_date: str | None = None, refresh: bool = False
 def customer_churn_dashboard(run_date: str | None = None):
     try:
         return _template_response("dashboard.html")
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected customer-churn dashboard error", exc)
 
 
@@ -330,7 +329,7 @@ def customer_churn_dashboard_data(run_date: str | None = None):
         payload = build_phase7_reporting_view_model(PROJECT_ROOT, run_date=run_date)
     except FileNotFoundError as exc:
         return _not_found(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected customer-churn dashboard data error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -339,7 +338,7 @@ def customer_churn_dashboard_data(run_date: str | None = None):
 def tested_actions_approval(request: Request, run_date: str | None = None):
     try:
         return _template_response("tested-actions-approval.html")
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected tested-actions approval page error", exc)
 
 
@@ -349,7 +348,7 @@ def tested_actions_approval_data(request: Request, run_date: str | None = None):
         payload = build_phase7_review_page_view_model(PROJECT_ROOT, run_date=run_date)
     except FileNotFoundError as exc:
         return _not_found(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected tested-actions approval data error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -358,7 +357,7 @@ def tested_actions_approval_data(request: Request, run_date: str | None = None):
 def new_actions_testing(request: Request, run_date: str | None = None):
     try:
         return _template_response("new-actions-testing.html")
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected new-actions testing page error", exc)
 
 
@@ -368,7 +367,7 @@ def new_actions_testing_data(request: Request, run_date: str | None = None):
         payload = build_phase7_review_page_view_model(PROJECT_ROOT, run_date=run_date)
     except FileNotFoundError as exc:
         return _not_found(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected new-actions testing data error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -386,7 +385,7 @@ def phase7_integrated_actions_latest(run_date: str | None = None, refresh: bool 
         return _not_found(exc)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 7 integrated actions error", exc)
     return _json_response(HTTPStatus.OK, response_payload)
 
@@ -397,7 +396,7 @@ def phase7_stat_tests_latest(run_date: str | None = None):
         payload = build_phase7_stat_summary(PROJECT_ROOT, run_date=run_date)
     except FileNotFoundError as exc:
         return _not_found(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 7 stat summary error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -406,7 +405,7 @@ def phase7_stat_tests_latest(run_date: str | None = None):
 def phase7_action_history_latest(run_date: str | None = None):
     try:
         payload = {"status": "ok", "run_date": run_date, "history": load_phase7_action_history(PROJECT_ROOT, run_date=run_date)}
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 7 action history error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -415,7 +414,7 @@ def phase7_action_history_latest(run_date: str | None = None):
 def phase7_stat_launch_requests_latest(run_date: str | None = None):
     try:
         payload = {"status": "ok", "run_date": run_date, "requests": load_phase7_launch_requests(PROJECT_ROOT, run_date=run_date)}
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 7 launch request listing error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -426,7 +425,7 @@ def phase7_post_test_decisions_pending(run_date: str | None = None):
         payload = build_phase7_post_test_decision_queue(PROJECT_ROOT, run_date=run_date)
     except FileNotFoundError as exc:
         return _not_found(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 7 post-test-decision queue error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -437,7 +436,7 @@ def phase7_kpis_latest(run_date: str | None = None, refresh: bool = False):
         payload = build_phase7_kpi_status_view(PROJECT_ROOT, run_date=run_date) if refresh else load_latest_phase7_kpi_status(PROJECT_ROOT)
     except FileNotFoundError as exc:
         return _not_found(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 7 KPI status error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -448,7 +447,7 @@ def phase7_n8n_payload_latest(run_date: str | None = None, refresh: bool = False
         payload = build_phase7_n8n_payload(PROJECT_ROOT, run_date=run_date) if refresh else load_latest_phase7_n8n_payload(PROJECT_ROOT)
     except FileNotFoundError as exc:
         return _not_found(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 7 n8n payload error", exc)
     return _json_response(HTTPStatus.OK, payload)
 
@@ -460,7 +459,7 @@ async def events_onesignal(request: Request):
         response_payload = churn_service._ingest_onesignal_events(payload)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected OneSignal ingestion error", exc)
     return _json_response(HTTPStatus.CREATED, response_payload)
 
@@ -472,7 +471,7 @@ async def phase6_proposals_decision(request: Request):
         response_payload = record_action_decision(payload, project_root=PROJECT_ROOT)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 6 proposal decision error", exc)
     return _json_response(HTTPStatus.CREATED, response_payload)
 
@@ -486,7 +485,7 @@ async def phase6_ab_tests_launch(request: Request):
         response_payload = launch_ab_test(payload, project_root=PROJECT_ROOT)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 6 A/B launch error", exc)
     return _json_response(HTTPStatus.CREATED, response_payload)
 
@@ -512,7 +511,7 @@ async def phase7_actions_decision(request: Request):
         response_payload = record_phase7_action_decision(payload, project_root=PROJECT_ROOT)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 7 action decision error", exc)
     return _json_response(HTTPStatus.CREATED, response_payload)
 
@@ -527,7 +526,7 @@ async def phase7_actions_post_test_decision(request: Request):
         response_payload = record_phase7_post_test_decision(payload, project_root=PROJECT_ROOT)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 7 post-test decision error", exc)
     return _json_response(HTTPStatus.CREATED, response_payload)
 
@@ -542,7 +541,7 @@ async def phase7_stat_launch_requests_create(request: Request):
         response_payload = create_phase7_stat_launch_request(payload, project_root=PROJECT_ROOT)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 7 launch request create error", exc)
     return _json_response(HTTPStatus.CREATED, response_payload)
 
@@ -557,7 +556,7 @@ async def phase7_stat_launch_requests_execute(request: Request):
         response_payload = execute_phase7_stat_launch_request(payload, project_root=PROJECT_ROOT)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected Phase 7 launch request execute error", exc)
     return _json_response(HTTPStatus.CREATED, response_payload)
 
@@ -569,7 +568,7 @@ async def agent_decisions_shadow(request: Request):
         response_payload = churn_service._create_shadow_decision(payload, refresh_artifacts=True, refresh_trigger="shadow_create")
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected shadow decision create error", exc)
     return _json_response(HTTPStatus.CREATED, response_payload)
 
@@ -581,7 +580,7 @@ async def agent_decisions_shadow_run(request: Request):
         response_payload = churn_service._run_shadow_decision_cycle(payload)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected shadow decision run error", exc)
     return _json_response(HTTPStatus.CREATED, response_payload)
 
@@ -593,7 +592,7 @@ async def agent_decisions_shadow_reconcile(request: Request):
         response_payload = churn_service._reconcile_shadow_decision(payload)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected shadow decision reconcile error", exc)
     return _json_response(HTTPStatus.OK, response_payload)
 
@@ -605,6 +604,6 @@ async def coupons_generate(request: Request):
         response_payload = churn_service._generate_coupon(payload)
     except ValueError as exc:
         return _bad_request(exc)
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # noqa: BLE001  # pragma: no cover
         return _internal_error("Unexpected coupon generation error", exc)
     return _json_response(HTTPStatus.CREATED, response_payload)

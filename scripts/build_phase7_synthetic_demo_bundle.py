@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import hashlib
+import json
 import logging
 import sys
 from pathlib import Path
@@ -13,8 +13,16 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from evidence.phase7_artifacts import SYNTHETIC_DEMO_MODE, SYNTHETIC_FILENAME_PREFIX, phase7_namespace_dir
-from evidence.phase7_integration import build_integrated_actions, build_phase7_kpi_status_view, build_phase7_n8n_payload
+from evidence.phase7_artifacts import (
+    SYNTHETIC_DEMO_MODE,
+    SYNTHETIC_FILENAME_PREFIX,
+    phase7_namespace_dir,
+)
+from evidence.phase7_integration import (
+    build_integrated_actions,
+    build_phase7_kpi_status_view,
+    build_phase7_n8n_payload,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
 LOGGER = logging.getLogger(__name__)
@@ -222,11 +230,11 @@ def main() -> int:
             "baseline_p0": 0.096,
             "guardrail_q_threshold": 0.020,
             "control_n": 1000,
-            "control_converted": int(round(float(row.get("control_conversion_rate", 0.0)) * 1000)),
-            "control_opt_out": int(round(float(row.get("control_opt_out_rate", 0.0)) * 1000)),
+            "control_converted": round(float(row.get("control_conversion_rate", 0.0)) * 1000),
+            "control_opt_out": round(float(row.get("control_opt_out_rate", 0.0)) * 1000),
             "variant_n": 1000,
-            "variant_converted": int(round(float(row.get("variant_conversion_rate", 0.0)) * 1000)),
-            "variant_opt_out": int(round(float(row.get("variant_opt_out_rate", 0.0)) * 1000)),
+            "variant_converted": round(float(row.get("variant_conversion_rate", 0.0)) * 1000),
+            "variant_opt_out": round(float(row.get("variant_opt_out_rate", 0.0)) * 1000),
             "test_used": "synthetic_seed",
             "guardrail_breach": row.get("guardrail_breach"),
             "p_value": row.get("p_value"),

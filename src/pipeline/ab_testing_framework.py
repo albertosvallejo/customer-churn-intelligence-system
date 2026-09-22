@@ -123,7 +123,7 @@ def _validate_arm_dataframe(df: pd.DataFrame, name: str) -> None:
         raise ValueError(f"{name}: el brazo no contiene filas")
     for col in REQUIRED_COLUMNS:
         vals = set(pd.unique(df[col].dropna()))
-        if not vals.issubset({0, 1, True, False}):
+        if not vals.issubset({0, 1}):
             raise ValueError(f"{name}: la columna '{col}' debe ser binaria (0/1), valores encontrados: {vals}")
 
 
@@ -465,9 +465,7 @@ def run_ab_test(
 
     if guardrail["breach"] and guardrail_reliable:
         verdict: Verdict = "not_recommended_guardrail"
-    elif guardrail["breach"] and not guardrail_reliable:
-        verdict = "insufficient_sample"
-    elif not sample_adequate:
+    elif guardrail["breach"] and not guardrail_reliable or not sample_adequate:
         verdict = "insufficient_sample"
     elif p_value < alpha:
         verdict = "A_wins" if p_a > p_b else "B_wins"

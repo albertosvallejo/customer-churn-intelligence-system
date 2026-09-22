@@ -5,10 +5,10 @@ import json
 import os
 import random
 import subprocess
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable
 from zoneinfo import ZoneInfo
 
 import joblib
@@ -173,7 +173,7 @@ def current_git_sha(project_root: Path) -> str | None:
         )
         git_sha = result.stdout.strip()
         return git_sha or None
-    except Exception:
+    except (subprocess.CalledProcessError, OSError):
         return None
 
 

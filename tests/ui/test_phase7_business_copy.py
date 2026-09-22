@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -15,5 +14,5 @@ def test_business_copy_hides_internal_enums_and_empty_fields():
     assert "Reject" in tested_js
     assert "Pending review" in new_js
     assert "No recommendation available." not in new_js
-    assert "Review tested winners" in dashboard_template
-    assert "Review new proposals" in dashboard_template
+    assert "Tested Actions Approval" in dashboard_template
+    assert "New Actions Approval" in dashboard_template

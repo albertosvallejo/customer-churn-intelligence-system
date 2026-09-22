@@ -1,13 +1,13 @@
+import hashlib
 import json
 import os
-import hashlib
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
-from unittest import mock
 from pathlib import Path
+from unittest import mock
 
 import pandas as pd
 
@@ -24,8 +24,8 @@ from evidence.phase7_artifacts import (
     assert_phase7_mode_namespace,
     load_synthetic_manifest,
     phase7_namespace_dir,
-    resolve_synthetic_runtime_artifact,
     resolve_phase7_mode,
+    resolve_synthetic_runtime_artifact,
 )
 from evidence.phase7_integration import build_integrated_actions
 

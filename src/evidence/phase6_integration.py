@@ -5,7 +5,7 @@ import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import pandas as pd
 
@@ -98,7 +98,7 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def _append_history_record(root: Path, record: Dict[str, Any]) -> None:
+def _append_history_record(root: Path, record: dict[str, Any]) -> None:
     history_path = _action_history_path(root)
     history_path.parent.mkdir(parents=True, exist_ok=True)
     if history_path.exists():
@@ -122,14 +122,14 @@ def _make_arm(n: int, converted: int, opt_out: int) -> pd.DataFrame:
     return pd.DataFrame({"converted": conv_col, "opt_out": opt_col})
 
 
-def build_action_proposals(project_root: Path | None = None, run_date: str | None = None) -> Dict[str, Any]:
+def build_action_proposals(project_root: Path | None = None, run_date: str | None = None) -> dict[str, Any]:
     """Build the first Phase 6.4 approval-gate proposal artifact from the latest eligible recommendations."""
     root = project_root or _project_root()
     catalog_path, effective_run_date = _resolve_catalog_and_run_date(root, run_date)
     catalog = load_catalog(catalog_path)
     rows = build_recommendation_rows(catalog)
 
-    proposals: List[Dict[str, Any]] = []
+    proposals: list[dict[str, Any]] = []
     for row in rows:
         if row["readiness"] != "approval_gate_eligible":
             continue
@@ -175,7 +175,7 @@ def build_action_proposals(project_root: Path | None = None, run_date: str | Non
     }
 
 
-def render_action_proposals_summary(proposals: List[Dict[str, Any]], run_date: str) -> str:
+def render_action_proposals_summary(proposals: list[dict[str, Any]], run_date: str) -> str:
     lines = [
         "# PHASE 6 ACTION PROPOSALS SUMMARY",
         "",
@@ -207,7 +207,7 @@ def render_action_proposals_summary(proposals: List[Dict[str, Any]], run_date: s
     return "\n".join(lines) + "\n"
 
 
-def load_action_proposals(project_root: Path | None = None, run_date: str | None = None) -> List[Dict[str, Any]]:
+def load_action_proposals(project_root: Path | None = None, run_date: str | None = None) -> list[dict[str, Any]]:
     root = project_root or _project_root()
     if run_date:
         path = _proposals_path(root, run_date)
@@ -221,7 +221,7 @@ def load_action_proposals(project_root: Path | None = None, run_date: str | None
     return _read_json(path)
 
 
-def record_action_decision(payload: Dict[str, Any], project_root: Path | None = None) -> Dict[str, Any]:
+def record_action_decision(payload: dict[str, Any], project_root: Path | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     proposal_id = str(payload.get("proposal_id") or "").strip()
     decision_status = str(payload.get("decision_status") or "").strip().lower()
@@ -283,11 +283,11 @@ def record_action_decision(payload: Dict[str, Any], project_root: Path | None = 
 
 
 def launch_ab_test(
-    payload: Dict[str, Any],
+    payload: dict[str, Any],
     project_root: Path | None = None,
     *,
     test_scenario_key: str | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Launch a simulated Phase 6.4 A/B test for an approved proposal and persist the result.
 
     `test_scenario_key` is an internal-only injection point for tests and must not be exposed
@@ -410,12 +410,12 @@ def launch_ab_test(
     return result
 
 
-def build_kpi_status_view(project_root: Path | None = None) -> Dict[str, Any]:
+def build_kpi_status_view(project_root: Path | None = None) -> dict[str, Any]:
     """Build a latest KPI status view from the append-only history of simulated Phase 6.4 launches."""
     root = project_root or _project_root()
     runs_df = _load_ab_test_runs_frame(root)
     run_date = _utc_now_iso()[:10].replace("-", "")
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
     if not runs_df.empty:
         for _, row in runs_df.sort_values(["launch_ts", "proposal_id"], ascending=[False, True]).iterrows():
             records.append(
@@ -452,7 +452,7 @@ def build_kpi_status_view(project_root: Path | None = None) -> Dict[str, Any]:
     return payload
 
 
-def render_kpi_status_summary(payload: Dict[str, Any]) -> str:
+def render_kpi_status_summary(payload: dict[str, Any]) -> str:
     lines = [
         "# PHASE 6 KPI STATUS",
         "",
@@ -483,7 +483,7 @@ def render_kpi_status_summary(payload: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build_n8n_action_payload(project_root: Path | None = None, run_date: str | None = None) -> Dict[str, Any]:
+def build_n8n_action_payload(project_root: Path | None = None, run_date: str | None = None) -> dict[str, Any]:
     """Build a versioned n8n-ready payload from approved Phase 6.4 proposals."""
     root = project_root or _project_root()
     proposals = load_action_proposals(root, run_date)
@@ -524,7 +524,7 @@ def build_n8n_action_payload(project_root: Path | None = None, run_date: str | N
     return payload
 
 
-def load_latest_kpi_status(project_root: Path | None = None) -> Dict[str, Any]:
+def load_latest_kpi_status(project_root: Path | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     candidates = sorted((root / "data" / "processed").glob("phase6_kpi_status_*.json"))
     if not candidates:
@@ -532,7 +532,7 @@ def load_latest_kpi_status(project_root: Path | None = None) -> Dict[str, Any]:
     return _read_json(candidates[-1])
 
 
-def load_latest_n8n_action_payload(project_root: Path | None = None) -> Dict[str, Any]:
+def load_latest_n8n_action_payload(project_root: Path | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     candidates = sorted((root / "data" / "processed").glob("phase6_n8n_payload_*.json"))
     if not candidates:
@@ -540,7 +540,7 @@ def load_latest_n8n_action_payload(project_root: Path | None = None) -> Dict[str
     return _read_json(candidates[-1])
 
 
-def load_action_history(project_root: Path | None = None) -> List[Dict[str, Any]]:
+def load_action_history(project_root: Path | None = None) -> list[dict[str, Any]]:
     root = project_root or _project_root()
     history_path = _action_history_path(root)
     if not history_path.exists():

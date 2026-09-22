@@ -12,7 +12,6 @@ if str(SRC_DIR) not in sys.path:
 
 from evidence.phase6_integration import build_kpi_status_view
 
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
     logging.getLogger(__name__).info("Starting Phase 6.4 KPI status build")

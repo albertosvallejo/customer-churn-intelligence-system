@@ -9,7 +9,10 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from evidence.recommendation_builder import build_and_write_recommendations, build_recommendation_rows
+from evidence.recommendation_builder import (
+    build_and_write_recommendations,
+    build_recommendation_rows,
+)
 
 
 class TestEvidenceSourcingRecommendations(unittest.TestCase):

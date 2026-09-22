@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 from urllib.request import urlopen
 from xml.etree import ElementTree as ET
 
@@ -33,11 +33,11 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def _registry_path(allowlist: Dict[str, Any], project_root: Path) -> Path:
+def _registry_path(allowlist: dict[str, Any], project_root: Path) -> Path:
     return project_root / allowlist["source_scraping_registry"]["path"]
 
 
-def load_registry(path: Path) -> Dict[str, Any]:
+def load_registry(path: Path) -> dict[str, Any]:
     if path.exists():
         return _load_json(path)
     return {
@@ -48,7 +48,7 @@ def load_registry(path: Path) -> Dict[str, Any]:
     }
 
 
-def _upsert_registry_record(records: List[Dict[str, Any]], new_record: Dict[str, Any]) -> None:
+def _upsert_registry_record(records: list[dict[str, Any]], new_record: dict[str, Any]) -> None:
     for idx, record in enumerate(records):
         if record["domain"] == new_record["domain"] and record["path_pattern"] == new_record["path_pattern"]:
             records[idx] = new_record
@@ -56,20 +56,20 @@ def _upsert_registry_record(records: List[Dict[str, Any]], new_record: Dict[str,
     records.append(new_record)
 
 
-def _iter_sources(allowlist: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _iter_sources(allowlist: dict[str, Any]) -> list[dict[str, Any]]:
     return list(allowlist.get("seed_sources", [])) + list(allowlist.get("expansion_pool", []))
 
 
-def _parse_registry_key(registry_key: str) -> Tuple[str, str]:
+def _parse_registry_key(registry_key: str) -> tuple[str, str]:
     domain, path_pattern = registry_key.split("::", 1)
     return domain, path_pattern
 
 
 def register_source_governance_snapshot(
-    allowlist: Dict[str, Any],
-    registry: Dict[str, Any],
+    allowlist: dict[str, Any],
+    registry: dict[str, Any],
     checked_at: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     records = registry.setdefault("records", [])
     for source in _iter_sources(allowlist):
         governance = source["scraping_governance"]
@@ -103,16 +103,16 @@ def _parse_feed_datetime(raw_value: str | None) -> str | None:
         return None
     try:
         return parsedate_to_datetime(raw_value).astimezone(timezone.utc).replace(microsecond=0).isoformat()
-    except Exception:  # pragma: no cover - defensive fallback
+    except Exception:  # noqa: BLE001  # pragma: no cover - defensive fallback
         return None
 
 
-def fetch_rss_entries(feed_url: str, source_name: str) -> List[Dict[str, Any]]:
+def fetch_rss_entries(feed_url: str, source_name: str) -> list[dict[str, Any]]:
     LOGGER.info("Fetching Phase 7 RSS feed for %s from %s", source_name, feed_url)
     with urlopen(feed_url) as response:
         payload = response.read()
     root = ET.fromstring(payload)
-    entries: List[Dict[str, Any]] = []
+    entries: list[dict[str, Any]] = []
     for item in root.findall("./channel/item"):
         entries.append(
             {
@@ -129,7 +129,7 @@ def fetch_rss_entries(feed_url: str, source_name: str) -> List[Dict[str, Any]]:
 def build_phase7_extraction_snapshot(
     project_root: Path | None = None,
     checked_at: str | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     root = project_root or _project_root()
     allowlist = load_allowlist(root / "config" / "evidence_sources_allowlist.yaml")
     timestamp = checked_at or _now_utc_iso()
@@ -137,8 +137,8 @@ def build_phase7_extraction_snapshot(
     registry = load_registry(registry_path)
     registry = register_source_governance_snapshot(allowlist, registry, timestamp)
 
-    in_scope_articles: List[Dict[str, Any]] = []
-    out_of_scope_sources: List[Dict[str, Any]] = []
+    in_scope_articles: list[dict[str, Any]] = []
+    out_of_scope_sources: list[dict[str, Any]] = []
     for source in _iter_sources(allowlist):
         automation_scope = source["automation_scope"]
         if automation_scope["pipeline_status"] == "in_scope" and automation_scope["allowed_channel"] == "rss_only":
@@ -167,7 +167,7 @@ def build_phase7_extraction_snapshot(
 
 
 def write_phase7_extraction_snapshot(
-    snapshot: Dict[str, Any],
+    snapshot: dict[str, Any],
     project_root: Path | None = None,
     run_date: str | None = None,
     mode: str | None = None,
@@ -184,7 +184,7 @@ def build_and_write_phase7_extraction_snapshot(
     run_date: str | None = None,
     checked_at: str | None = None,
     mode: str | None = None,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     root = project_root or _project_root()
     snapshot = build_phase7_extraction_snapshot(root, checked_at=checked_at)
     resolved_mode = resolve_phase7_mode(mode)

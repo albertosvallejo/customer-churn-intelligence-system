@@ -6,42 +6,12 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from functools import lru_cache
-from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 
 import joblib
 import pandas as pd
 from sqlalchemy import create_engine, text
-
-from evidence.phase6_integration import (
-    build_action_proposals,
-    build_kpi_status_view,
-    build_n8n_action_payload,
-    launch_ab_test,
-    load_action_history,
-    load_action_proposals,
-    load_latest_kpi_status,
-    load_latest_n8n_action_payload,
-    record_action_decision,
-)
-from evidence.phase7_integration import (
-    build_integrated_actions,
-    build_phase7_kpi_status_view,
-    build_phase7_n8n_payload,
-    build_phase7_post_test_decision_queue,
-    build_phase7_stat_summary,
-    create_phase7_stat_launch_request,
-    execute_phase7_stat_launch_request,
-    load_integrated_actions,
-    load_phase7_action_history,
-    load_phase7_launch_requests,
-    load_latest_phase7_kpi_status,
-    load_latest_phase7_n8n_payload,
-    load_phase7_stat_test_runs,
-    record_phase7_action_decision,
-    record_phase7_post_test_decision,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -97,10 +67,11 @@ def _json_default(value: Any) -> Any:
         converted = value.tolist()
         return converted
     try:
-        if pd.isna(value):
-            return None
-    except Exception:
-        pass
+        is_missing = bool(pd.isna(value))
+    except (TypeError, ValueError):
+        is_missing = False
+    if is_missing:
+        return None
     if hasattr(value, "item"):
         return value.item()
     return value
@@ -260,7 +231,7 @@ def _coerce_onesignal_events(payload: dict) -> list[dict]:
 
 def _normalize_onesignal_event(event: dict) -> dict:
     if not isinstance(event, dict):
-        raise ValueError("each event must be an object")
+        raise ValueError("each event must be an object")  # noqa: TRY004
 
     customer_unique_id = str(
         event.get("external_user_id")
@@ -758,7 +729,12 @@ def _run_shadow_decision_cycle(payload: dict | None = None) -> dict:
 
 
 def _refresh_phase5_daily_status_artifacts() -> dict:
-    from pipeline.phase5_daily_status import OUTPUT_JSON_PATH, OUTPUT_MARKDOWN_PATH, build_daily_status_snapshot, save_outputs
+    from pipeline.phase5_daily_status import (
+        OUTPUT_JSON_PATH,
+        OUTPUT_MARKDOWN_PATH,
+        build_daily_status_snapshot,
+        save_outputs,
+    )
 
     snapshot = build_daily_status_snapshot()
     save_outputs(snapshot)

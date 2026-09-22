@@ -1,39 +1,40 @@
 import json
 import os
+import socket
 import sys
-import threading
 import tempfile
+import threading
+import time
 import unittest
 from pathlib import Path
-
-import pandas as pd
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
-from unittest.mock import patch
+
+import pandas as pd
+import uvicorn
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-import api.churn_service as churn_service
-from api.churn_service import COUPON_REGISTRY_PATH, create_server
+from api import churn_service
+from api.churn_service import COUPON_REGISTRY_PATH
 from evidence.phase6_integration import build_action_proposals
 from evidence.phase7_integration import load_integrated_actions
-from evidence.phase7_proposal_builder import build_and_write_action_drafts
 
 
 class TestChurnService(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._tmpdir = tempfile.TemporaryDirectory()
+        cls._previous_app_env = os.environ.get("APP_ENV")
+        os.environ["APP_ENV"] = "test"
         os.environ["CHURN_DB_URL"] = f"sqlite:///{Path(cls._tmpdir.name) / 'test_ops.sqlite'}"
         os.environ["PHASE7_REVIEW_TOKEN"] = "phase7-test-token"
         churn_service.DEFAULT_DB_URL = os.environ["CHURN_DB_URL"]
-        try:
-            churn_service._ops_engine().dispose()
-        except Exception:
-            pass
+        churn_service._ops_engine().dispose()
         churn_service._ops_engine.cache_clear()
         cls._registry_backup = None
         if COUPON_REGISTRY_PATH.exists():
@@ -41,16 +42,32 @@ class TestChurnService(unittest.TestCase):
         COUPON_REGISTRY_PATH.parent.mkdir(parents=True, exist_ok=True)
         COUPON_REGISTRY_PATH.write_text("", encoding="utf-8")
 
-        cls.server = create_server(host="127.0.0.1", port=0)
-        cls.port = cls.server.server_address[1]
-        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        from api.fastapi_app import app
+
+        cls.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        cls.socket.bind(("127.0.0.1", 0))
+        cls.socket.listen(5)
+        cls.port = cls.socket.getsockname()[1]
+        config = uvicorn.Config(app, log_level="warning", lifespan="off")
+        cls.server = uvicorn.Server(config)
+        cls.thread = threading.Thread(
+            target=cls.server.run,
+            kwargs={"sockets": [cls.socket]},
+            daemon=True,
+        )
         cls.thread.start()
+        for _ in range(100):
+            if cls.server.started:
+                break
+            time.sleep(0.05)
+        else:
+            raise RuntimeError("FastAPI/Uvicorn test server did not start")
 
     @classmethod
     def tearDownClass(cls):
-        cls.server.shutdown()
-        cls.server.server_close()
-        cls.thread.join(timeout=2)
+        cls.server.should_exit = True
+        cls.thread.join(timeout=5)
+        cls.socket.close()
         if cls._registry_backup is None:
             if COUPON_REGISTRY_PATH.exists():
                 COUPON_REGISTRY_PATH.unlink()
@@ -59,6 +76,10 @@ class TestChurnService(unittest.TestCase):
         cached_engine = churn_service._ops_engine()
         cached_engine.dispose()
         churn_service._ops_engine.cache_clear()
+        if cls._previous_app_env is None:
+            os.environ.pop("APP_ENV", None)
+        else:
+            os.environ["APP_ENV"] = cls._previous_app_env
         cls._tmpdir.cleanup()
 
     def _url(self, path: str) -> str:
@@ -201,7 +222,7 @@ class TestChurnService(unittest.TestCase):
         self.assertIn("recent_cycles", payload)
         self.assertIn("artifacts", payload)
         self.assertTrue(payload["artifacts"]["refreshed"])
-        self.assertEqual(payload["artifacts"]["html"], "reports/phase5_shadow_monitor_latest.html")
+        self.assertEqual(payload["artifacts"]["html"].replace("\\", "/"), "reports/phase5_shadow_monitor_latest.html")
 
     def test_agent_phase5_operational_status_endpoint(self):
         with urlopen(self._url("/agent/status/phase5?refresh=true")) as response:
@@ -432,10 +453,9 @@ class TestChurnService(unittest.TestCase):
                 self.assertEqual(response.status, 200)
                 self.assertIn("text/html", response.headers.get("Content-Type", ""))
                 body = response.read().decode("utf-8")
-            self.assertIn("Churn Campaigns Dashboard", body)
+            self.assertIn("CHURN CAMPAIGNS DASHBOARD", body)
             self.assertIn("History of all actions", body)
-            self.assertIn("Approved For Reporting Page", body)
-            self.assertIn("window.location.reload()", body)
+            self.assertIn("/static/js/dashboard.js", body)
             self.assertNotIn("/phase7/actions/post-test-decision", body)
             self.assertNotIn("/phase7/stat-launch-requests", body)
         finally:
@@ -526,8 +546,8 @@ class TestChurnService(unittest.TestCase):
             self.assertEqual(response.status, 200)
             body = response.read().decode("utf-8")
         self.assertIn("Tested Actions Approval", body)
-        self.assertIn("Both proposals passed statistical and guardrail checks", body)
-        self.assertIn("/phase7/actions/post-test-decision", body)
+        self.assertIn("Review each tested action before replacing the current incumbent", body)
+        self.assertIn("/static/js/tested-actions.js", body)
         self.assertNotIn("/phase7/actions/decision", body)
         self.assertNotIn("setInterval", body)
 

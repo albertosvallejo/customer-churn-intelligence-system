@@ -152,8 +152,8 @@ def build_governance_payload() -> dict:
             "precision_at_top_10pct": float(best_test["precision_at_top_10pct"]),
         },
         "totals": {
-            "baseline_rows": int(len(baseline)),
-            "current_rows": int(len(current)),
+            "baseline_rows": len(baseline),
+            "current_rows": len(current),
             "closed_evaluations": int(kpi_payload["totals"]["closed_evaluations"]),
             "current_high_share": current_high_share,
         },
@@ -301,6 +301,14 @@ def render_model_card_v3(payload: dict) -> str:
         for row in drivers.itertuples(index=False)
     )
     trigger_rows = "\n".join(f"- {item}" for item in payload["trigger_summary"])
+    feature_drift_rows = "\n".join(
+        f"| {row['feature']} | {row['baseline_mean']:.4f} | {row['current_mean']:.4f} | {row['ks_stat']:.4f} | {'YES' if row['triggered'] else 'NO'} |"
+        for row in payload["feature_drift"]
+    )
+    tier_stability_rows = "\n".join(
+        f"| {row['risk_tier']} | {row['baseline_share']:.4f} | {row['current_share']:.4f} | {row['share_delta']:.4f} |"
+        for row in payload["tier_stability"]
+    )
     return f"""# MODEL CARD — DAILY CUSTOMER CHURN PREDICTOR (PHASE 4 V3 DEMO)
 
 **Card version:** 20260531  
@@ -341,12 +349,12 @@ def render_model_card_v3(payload: dict) -> str:
 ## 6. Active drift monitor snapshot
 | Feature | Baseline mean | Current mean | KS stat | Trigger |
 | --- | ---: | ---: | ---: | --- |
-{"\n".join(f"| {row['feature']} | {row['baseline_mean']:.4f} | {row['current_mean']:.4f} | {row['ks_stat']:.4f} | {'YES' if row['triggered'] else 'NO'} |" for row in payload['feature_drift'])}
+{feature_drift_rows}
 
 ## 7. Tier stability snapshot
 | Tier | Baseline share | Current share | Delta |
 | --- | ---: | ---: | ---: |
-{"\n".join(f"| {row['risk_tier']} | {row['baseline_share']:.4f} | {row['current_share']:.4f} | {row['share_delta']:.4f} |" for row in payload['tier_stability'])}
+{tier_stability_rows}
 
 ## 8. Top active driver families
 | Tier | Driver family | Offer type | Rows |

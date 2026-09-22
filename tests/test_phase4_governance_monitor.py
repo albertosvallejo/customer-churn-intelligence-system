@@ -7,7 +7,11 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from pipeline.phase4_governance_monitor import build_governance_payload, render_governance_report, render_model_card_v3
+from pipeline.phase4_governance_monitor import (
+    build_governance_payload,
+    render_governance_report,
+    render_model_card_v3,
+)
 
 
 class TestPhase4GovernanceMonitor(unittest.TestCase):

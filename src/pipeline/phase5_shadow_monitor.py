@@ -50,8 +50,12 @@ def _load_shadow_log_frame() -> pd.DataFrame:
         ORDER BY cycle_date DESC, decision_ts DESC
         """
     )
-    with _ops_engine().connect() as conn:
-        frame = pd.read_sql(query, conn)
+    engine = _ops_engine()
+    try:
+        with engine.connect() as conn:
+            frame = pd.read_sql(query, conn)
+    finally:
+        engine.dispose()
     if frame.empty:
         return frame
     frame["decision_ts"] = pd.to_datetime(frame["decision_ts"], utc=False, errors="coerce")
@@ -68,16 +72,14 @@ def _is_critical_divergence(agent_decision: str | None, human_decision: str | No
         return False
     if agent == "dispatch_confirm" and human in {"skip", "escalation"}:
         return True
-    if human == "dispatch_confirm" and agent in {"skip", "escalation"}:
-        return True
-    return False
+    return human == "dispatch_confirm" and agent in {"skip", "escalation"}
 
 
 def build_shadow_monitor_payload() -> dict:
     log_frame = _load_shadow_log_frame()
     status_payload = _load_agent_status()
 
-    total_cycles = int(len(log_frame))
+    total_cycles = len(log_frame)
     reconciled = int(log_frame["has_human_decision"].sum()) if total_cycles else 0
     matched = int((log_frame["has_human_decision"] & log_frame["match_bool"]).sum()) if total_cycles else 0
     divergences = int((log_frame["has_human_decision"] & ~log_frame["match_bool"]).sum()) if total_cycles else 0

@@ -57,7 +57,7 @@ def resolve_git_reference_root() -> Path | None:
             )
             if result.stdout.strip():
                 return candidate
-        except Exception:
+        except (subprocess.CalledProcessError, OSError):
             continue
     return None
 

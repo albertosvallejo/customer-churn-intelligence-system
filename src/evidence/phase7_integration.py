@@ -1,33 +1,33 @@
 from __future__ import annotations
 
+import copy
 import json
 import logging
-import copy
 import threading
 import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 import pandas as pd
 
-from pipeline.ab_testing_framework import run_ab_test
 from evidence.phase7_artifacts import (
     SYNTHETIC_WARNING,
+    SyntheticDemoManifestError,
     namespaced_artifact_path,
     namespaced_report_path,
     phase7_namespace_dir,
-    SyntheticDemoManifestError,
+    resolve_phase7_mode,
     resolve_synthetic_manifest_run_date,
     resolve_synthetic_runtime_artifact,
-    resolve_phase7_mode,
 )
+from pipeline.ab_testing_framework import run_ab_test
 
 LOGGER = logging.getLogger(__name__)
 INTEGRATED_ACTIONS_CACHE_TTL_SECONDS = 45.0
 _INTEGRATED_ACTIONS_CACHE_LOCK = threading.Lock()
-_INTEGRATED_ACTIONS_CACHE: Dict[str, Tuple[float, Tuple[int, int], Dict[str, Any]]] = {}
+_INTEGRATED_ACTIONS_CACHE: dict[str, tuple[float, tuple[int, int], dict[str, Any]]] = {}
 
 DEFAULT_BASELINE_P0 = 0.096
 DEFAULT_GUARDRAIL_Q_THRESHOLD = 0.020
@@ -111,7 +111,7 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _deterministic_phase7_generated_at(payload: Dict[str, Any], run_date: str, mode: str) -> str:
+def _deterministic_phase7_generated_at(payload: dict[str, Any], run_date: str, mode: str) -> str:
     seeded_generated_at = payload.get("generated_at")
     if mode == "synthetic_demo" and seeded_generated_at:
         return str(seeded_generated_at)
@@ -181,12 +181,12 @@ def _integrated_actions_cache_key(path: Path) -> str:
     return str(path.resolve(strict=False))
 
 
-def _integrated_actions_file_signature(path: Path) -> Tuple[int, int]:
+def _integrated_actions_file_signature(path: Path) -> tuple[int, int]:
     stat = path.stat()
     return stat.st_mtime_ns, stat.st_size
 
 
-def _get_cached_integrated_actions(path: Path) -> Dict[str, Any] | None:
+def _get_cached_integrated_actions(path: Path) -> dict[str, Any] | None:
     cache_key = _integrated_actions_cache_key(path)
     now = time.monotonic()
     current_signature = _integrated_actions_file_signature(path)
@@ -201,7 +201,7 @@ def _get_cached_integrated_actions(path: Path) -> Dict[str, Any] | None:
         return copy.deepcopy(payload)
 
 
-def _set_cached_integrated_actions(path: Path, payload: Dict[str, Any]) -> None:
+def _set_cached_integrated_actions(path: Path, payload: dict[str, Any]) -> None:
     cache_key = _integrated_actions_cache_key(path)
     file_signature = _integrated_actions_file_signature(path)
     with _INTEGRATED_ACTIONS_CACHE_LOCK:
@@ -212,7 +212,7 @@ def _set_cached_integrated_actions(path: Path, payload: Dict[str, Any]) -> None:
         )
 
 
-def _load_integrated_actions_uncached(path: Path) -> Dict[str, Any]:
+def _load_integrated_actions_uncached(path: Path) -> dict[str, Any]:
     file_signature = _integrated_actions_file_signature(path)
     with _INTEGRATED_ACTIONS_CACHE_LOCK:
         cached = _INTEGRATED_ACTIONS_CACHE.get(_integrated_actions_cache_key(path))
@@ -232,7 +232,7 @@ def _load_integrated_actions_uncached(path: Path) -> Dict[str, Any]:
         return copy.deepcopy(payload)
 
 
-def _resolve_drafts_and_run_date(project_root: Path, run_date: str | None, mode: str | None = None) -> Tuple[Path, str]:
+def _resolve_drafts_and_run_date(project_root: Path, run_date: str | None, mode: str | None = None) -> tuple[Path, str]:
     resolved_mode = resolve_phase7_mode(mode)
     if run_date:
         path = _drafts_path(project_root, run_date, resolved_mode)
@@ -260,11 +260,11 @@ def _make_arm(n: int, converted: int, opt_out: int) -> pd.DataFrame:
 
 
 def _build_base_integrated_action(
-    draft: Dict[str, Any],
-    row: Dict[str, Any],
+    draft: dict[str, Any],
+    row: dict[str, Any],
     run_date: str,
     generated_at: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     now_iso = generated_at
     passed = bool(row.get("passed", False))
     generation_contract_violation = bool(draft.get("generation_contract_violation", False))
@@ -307,26 +307,26 @@ def _build_base_integrated_action(
     }
 
 
-def _action_content_snapshot(action: Dict[str, Any]) -> Dict[str, Any]:
+def _action_content_snapshot(action: dict[str, Any]) -> dict[str, Any]:
     return {field: action.get(field) for field in DECISION_SNAPSHOT_FIELDS}
 
 
-def _find_action(actions: List[Dict[str, Any]], action_id: str) -> Dict[str, Any]:
+def _find_action(actions: list[dict[str, Any]], action_id: str) -> dict[str, Any]:
     matches = [action for action in actions if action["action_id"] == action_id]
     if not matches:
         raise ValueError(f"action_id '{action_id}' was not found in the integrated action artifact")
     return matches[0]
 
 
-def _find_action_or_none(actions: List[Dict[str, Any]], action_id: str) -> Dict[str, Any] | None:
+def _find_action_or_none(actions: list[dict[str, Any]], action_id: str) -> dict[str, Any] | None:
     matches = [action for action in actions if action["action_id"] == action_id]
     return matches[0] if matches else None
 
 
 def _merge_integrated_action_with_persisted_state(
-    base_action: Dict[str, Any],
-    persisted_action: Dict[str, Any] | None,
-) -> Dict[str, Any]:
+    base_action: dict[str, Any],
+    persisted_action: dict[str, Any] | None,
+) -> dict[str, Any]:
     if not persisted_action:
         return base_action
 
@@ -355,14 +355,14 @@ def _merge_integrated_action_with_persisted_state(
     return merged
 
 
-def _load_stat_runs_by_action_id(root: Path, mode: str | None = None) -> Dict[str, Dict[str, Any]]:
+def _load_stat_runs_by_action_id(root: Path, mode: str | None = None) -> dict[str, dict[str, Any]]:
     path = _stat_runs_path(root, mode)
     if not path.exists():
         return {}
     frame = pd.read_parquet(path)
     if frame.empty:
         return {}
-    latest_by_action: Dict[str, Dict[str, Any]] = {}
+    latest_by_action: dict[str, dict[str, Any]] = {}
     for row in frame.to_dict(orient="records"):
         action_id = str(row.get("action_id") or "").strip()
         if not action_id:
@@ -371,7 +371,7 @@ def _load_stat_runs_by_action_id(root: Path, mode: str | None = None) -> Dict[st
     return latest_by_action
 
 
-def _enrich_integrated_action_with_stat_run(action: Dict[str, Any], stat_run: Dict[str, Any] | None) -> Dict[str, Any]:
+def _enrich_integrated_action_with_stat_run(action: dict[str, Any], stat_run: dict[str, Any] | None) -> dict[str, Any]:
     if not stat_run:
         return action
     enriched = dict(action)
@@ -390,7 +390,7 @@ def _enrich_integrated_action_with_stat_run(action: Dict[str, Any], stat_run: Di
     return enriched
 
 
-def _has_required_post_test_context(action: Dict[str, Any]) -> bool:
+def _has_required_post_test_context(action: dict[str, Any]) -> bool:
     for field in REQUIRED_DECISION_CONTEXT_FIELDS:
         value = action.get(field)
         if value is None:
@@ -400,7 +400,7 @@ def _has_required_post_test_context(action: Dict[str, Any]) -> bool:
     return bool(action.get("synthetic_previous_action") or action.get("comparison_target_action_id") or action.get("approval_status") == "approved")
 
 
-def build_integrated_actions(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> Dict[str, Any]:
+def build_integrated_actions(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> dict[str, Any]:
     """Translate Phase 7 drafts into stat-engine-ready action candidates without duplicating verdict logic."""
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
@@ -409,7 +409,7 @@ def build_integrated_actions(project_root: Path | None = None, run_date: str | N
     drafts = payload.get("drafts", [])
     generated_at = _deterministic_phase7_generated_at(payload, effective_run_date, resolved_mode)
     validation = {row["proposal_id"]: row for row in payload.get("validation", [])}
-    persisted_actions_by_proposal_id: Dict[str, Dict[str, Any]] = {}
+    persisted_actions_by_proposal_id: dict[str, dict[str, Any]] = {}
     integrated_path = _integrated_actions_path(root, effective_run_date, resolved_mode)
     if integrated_path.exists():
         persisted_payload = _read_json(integrated_path)
@@ -418,7 +418,7 @@ def build_integrated_actions(project_root: Path | None = None, run_date: str | N
         }
 
     stat_runs_by_action_id = _load_stat_runs_by_action_id(root, resolved_mode)
-    actions: List[Dict[str, Any]] = []
+    actions: list[dict[str, Any]] = []
     for draft in drafts:
         row = validation.get(draft["proposal_id"], {})
         base_action = _build_base_integrated_action(draft, row, effective_run_date, generated_at)
@@ -450,7 +450,7 @@ def build_integrated_actions(project_root: Path | None = None, run_date: str | N
     }
 
 
-def render_integrated_actions_report(payload: Dict[str, Any]) -> str:
+def render_integrated_actions_report(payload: dict[str, Any]) -> str:
     lines = [
         "# PHASE 7 INTEGRATED ACTIONS",
         "",
@@ -478,7 +478,7 @@ def render_integrated_actions_report(payload: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def load_integrated_actions(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> Dict[str, Any]:
+def load_integrated_actions(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
     if resolved_mode == "synthetic_demo":
@@ -521,7 +521,7 @@ def _save_stat_runs_frame(root: Path, frame: pd.DataFrame, mode: str | None = No
     frame.to_parquet(path, index=False)
 
 
-def _append_phase7_history_record(root: Path, record: Dict[str, Any], mode: str | None = None) -> None:
+def _append_phase7_history_record(root: Path, record: dict[str, Any], mode: str | None = None) -> None:
     path = _phase7_action_history_path(root, resolve_phase7_mode(mode))
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
@@ -566,7 +566,7 @@ def _save_phase7_launch_requests_frame(root: Path, frame: pd.DataFrame, mode: st
     frame.to_parquet(path, index=False)
 
 
-def load_phase7_stat_test_runs(project_root: Path | None = None, mode: str | None = None) -> List[Dict[str, Any]]:
+def load_phase7_stat_test_runs(project_root: Path | None = None, mode: str | None = None) -> list[dict[str, Any]]:
     root = project_root or _project_root()
     runs_df = _load_stat_runs_frame(root, mode)
     if runs_df.empty:
@@ -574,7 +574,7 @@ def load_phase7_stat_test_runs(project_root: Path | None = None, mode: str | Non
     return runs_df.to_dict(orient="records")
 
 
-def _phase7_history_visibility_status(record: Dict[str, Any]) -> str:
+def _phase7_history_visibility_status(record: dict[str, Any]) -> str:
     event_type = str(record.get("event_type") or "").strip()
     decision_status = str(record.get("decision_status") or "").strip().lower()
     decision_type = str(record.get("decision_type") or "").strip()
@@ -590,11 +590,11 @@ def _phase7_history_visibility_status(record: Dict[str, Any]) -> str:
     return "hidden_unsupported"
 
 
-def _is_phase7_history_record_visible(record: Dict[str, Any]) -> bool:
+def _is_phase7_history_record_visible(record: dict[str, Any]) -> bool:
     return _phase7_history_visibility_status(record).startswith("visible")
 
 
-def load_phase7_action_history(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> List[Dict[str, Any]]:
+def load_phase7_action_history(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> list[dict[str, Any]]:
     root = project_root or _project_root()
     history_df = _load_phase7_history_frame(root, mode)
     if history_df.empty:
@@ -603,7 +603,7 @@ def load_phase7_action_history(project_root: Path | None = None, run_date: str |
     if run_date:
         records = [row for row in records if row.get("proposal_run_date") == run_date]
 
-    visible_records: List[Dict[str, Any]] = []
+    visible_records: list[dict[str, Any]] = []
     for row in records:
         visibility_status = _phase7_history_visibility_status(row)
         enriched_row = dict(row)
@@ -613,7 +613,7 @@ def load_phase7_action_history(project_root: Path | None = None, run_date: str |
     return json.loads(json.dumps(visible_records, default=_json_default))
 
 
-def record_phase7_post_test_decision(payload: Dict[str, Any], project_root: Path | None = None, mode: str | None = None) -> Dict[str, Any]:
+def record_phase7_post_test_decision(payload: dict[str, Any], project_root: Path | None = None, mode: str | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
     action_id = str(payload.get("action_id") or "").strip()
@@ -745,14 +745,14 @@ def record_phase7_post_test_decision(payload: Dict[str, Any], project_root: Path
     return record
 
 
-def _is_active_incumbent_candidate(action: Dict[str, Any]) -> bool:
+def _is_active_incumbent_candidate(action: dict[str, Any]) -> bool:
     return (
         action.get("approval_status") == "approved"
         and action.get("lifecycle_state") in ACTIVE_INCUMBENT_LIFECYCLE_STATES
     )
 
 
-def _is_pending_post_test_decision(action: Dict[str, Any]) -> bool:
+def _is_pending_post_test_decision(action: dict[str, Any]) -> bool:
     # A challenger is "pending" for page 2.2 exactly when it has a completed
     # stat run with a recognized verdict, and no decision_type has been
     # recorded for it yet (record_phase7_post_test_decision writes
@@ -769,8 +769,8 @@ def build_phase7_post_test_decision_queue(
     project_root: Path | None = None,
     run_date: str | None = None,
     mode: str | None = None,
-    integrated_actions_payload: Dict[str, Any] | None = None,
-) -> Dict[str, Any]:
+    integrated_actions_payload: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """7.2.2 read contract: formalizes, as a server-resolved payload, what page 2.2
     needs to render 'winners pending post-test-decision against the active action'.
     Does not write anything; the actual decision is still made via
@@ -781,7 +781,7 @@ def build_phase7_post_test_decision_queue(
     actions = integrated.get("actions", [])
     incumbent_candidates = [action for action in actions if _is_active_incumbent_candidate(action)]
 
-    pending_entries: List[Dict[str, Any]] = []
+    pending_entries: list[dict[str, Any]] = []
     for action in actions:
         if not _is_pending_post_test_decision(action):
             continue
@@ -829,7 +829,7 @@ def build_phase7_post_test_decision_queue(
     return json.loads(json.dumps(payload, default=_json_default))
 
 
-def load_phase7_launch_requests(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> List[Dict[str, Any]]:
+def load_phase7_launch_requests(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> list[dict[str, Any]]:
     root = project_root or _project_root()
     frame = _load_phase7_launch_requests_frame(root, mode)
     if frame.empty:
@@ -840,7 +840,7 @@ def load_phase7_launch_requests(project_root: Path | None = None, run_date: str 
     return json.loads(json.dumps(records, default=_json_default))
 
 
-def record_phase7_action_decision(payload: Dict[str, Any], project_root: Path | None = None, mode: str | None = None) -> Dict[str, Any]:
+def record_phase7_action_decision(payload: dict[str, Any], project_root: Path | None = None, mode: str | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
     action_id = str(payload.get("action_id") or "").strip()
@@ -904,7 +904,7 @@ def record_phase7_action_decision(payload: Dict[str, Any], project_root: Path | 
     return record
 
 
-def create_phase7_stat_launch_request(payload: Dict[str, Any], project_root: Path | None = None, mode: str | None = None) -> Dict[str, Any]:
+def create_phase7_stat_launch_request(payload: dict[str, Any], project_root: Path | None = None, mode: str | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
     action_id = str(payload.get("action_id") or "").strip()
@@ -982,7 +982,7 @@ def create_phase7_stat_launch_request(payload: Dict[str, Any], project_root: Pat
     return json.loads(json.dumps(record, default=_json_default))
 
 
-def execute_phase7_stat_launch_request(payload: Dict[str, Any], project_root: Path | None = None, mode: str | None = None) -> Dict[str, Any]:
+def execute_phase7_stat_launch_request(payload: dict[str, Any], project_root: Path | None = None, mode: str | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
     launch_request_id = str(payload.get("launch_request_id") or "").strip()
@@ -1030,7 +1030,7 @@ def execute_phase7_stat_launch_request(payload: Dict[str, Any], project_root: Pa
     return result
 
 
-def build_phase7_stat_summary(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> Dict[str, Any]:
+def build_phase7_stat_summary(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
     integrated = load_integrated_actions(root, run_date, resolved_mode)
@@ -1051,7 +1051,7 @@ def build_phase7_stat_summary(project_root: Path | None = None, run_date: str | 
     return json.loads(json.dumps(payload, default=_json_default))
 
 
-def render_phase7_kpi_status_summary(payload: Dict[str, Any]) -> str:
+def render_phase7_kpi_status_summary(payload: dict[str, Any]) -> str:
     lines = [
         "# PHASE 7 KPI STATUS",
         "",
@@ -1077,7 +1077,7 @@ def render_phase7_kpi_status_summary(payload: Dict[str, Any]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def build_phase7_kpi_status_view(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> Dict[str, Any]:
+def build_phase7_kpi_status_view(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
     payload = build_phase7_stat_summary(root, run_date, resolved_mode)
@@ -1089,7 +1089,7 @@ def build_phase7_kpi_status_view(project_root: Path | None = None, run_date: str
     return payload
 
 
-def load_latest_phase7_kpi_status(project_root: Path | None = None, mode: str | None = None) -> Dict[str, Any]:
+def load_latest_phase7_kpi_status(project_root: Path | None = None, mode: str | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
     if resolved_mode == "synthetic_demo":
@@ -1100,7 +1100,7 @@ def load_latest_phase7_kpi_status(project_root: Path | None = None, mode: str | 
     return _read_json(candidates[-1])
 
 
-def build_phase7_n8n_payload(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> Dict[str, Any]:
+def build_phase7_n8n_payload(project_root: Path | None = None, run_date: str | None = None, mode: str | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
     integrated = load_integrated_actions(root, run_date, resolved_mode)
@@ -1137,7 +1137,7 @@ def build_phase7_n8n_payload(project_root: Path | None = None, run_date: str | N
     return payload
 
 
-def load_latest_phase7_n8n_payload(project_root: Path | None = None, mode: str | None = None) -> Dict[str, Any]:
+def load_latest_phase7_n8n_payload(project_root: Path | None = None, mode: str | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
     if resolved_mode == "synthetic_demo":
@@ -1148,7 +1148,7 @@ def load_latest_phase7_n8n_payload(project_root: Path | None = None, mode: str |
     return _read_json(candidates[-1])
 
 
-def evaluate_integrated_action(payload: Dict[str, Any], project_root: Path | None = None, mode: str | None = None) -> Dict[str, Any]:
+def evaluate_integrated_action(payload: dict[str, Any], project_root: Path | None = None, mode: str | None = None) -> dict[str, Any]:
     """Run the validated statistical engine on a Phase 7 action candidate using supplied experiment counts."""
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)

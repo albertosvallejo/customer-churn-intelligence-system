@@ -157,7 +157,7 @@ def build_population_benchmark_payload() -> dict:
         "overall_baseline": {
             "treated_conversion_rate": overall_treated_rate,
             "customers": int(customer["customer_unique_id"].nunique()),
-            "closed_evaluations": int(len(evaluations)),
+            "closed_evaluations": len(evaluations),
         },
         "segment_summary": summary.to_dict(orient="records"),
         "tier_mix": tier_mix.to_dict(orient="records"),

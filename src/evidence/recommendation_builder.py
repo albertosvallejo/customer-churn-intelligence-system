@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 LOGGER = logging.getLogger(__name__)
 
@@ -36,14 +36,14 @@ def _resolve_catalog_path_for_run_date(run_date: str, project_root: Path | None 
     return target
 
 
-def load_catalog(path: Path | None = None) -> List[Dict[str, Any]]:
+def load_catalog(path: Path | None = None) -> list[dict[str, Any]]:
     """Load either an explicit catalog snapshot or the latest available Phase 6 catalog."""
     target = path or _resolve_latest_catalog_path()
     LOGGER.info("Loading Phase 6 catalog from %s", target)
     return json.loads(target.read_text(encoding="utf-8"))
 
 
-def _priority_score(entry: Dict[str, Any]) -> int:
+def _priority_score(entry: dict[str, Any]) -> int:
     """Score ranking order with fixed precedence: confidence > actionability > applicability."""
     return (
         _CONFIDENCE_RANK[entry["confidence_score"]] * _CONFIDENCE_WEIGHT
@@ -52,9 +52,9 @@ def _priority_score(entry: Dict[str, Any]) -> int:
     )
 
 
-def build_recommendation_rows(catalog_entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def build_recommendation_rows(catalog_entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Translate the Phase 6 catalog into recommendation rows while preserving governance gates."""
-    rows: List[Dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for entry in catalog_entries:
         confidence = entry["confidence_score"]
         if confidence == "high":
@@ -90,7 +90,7 @@ def build_recommendation_rows(catalog_entries: List[Dict[str, Any]]) -> List[Dic
     return sorted(rows, key=lambda row: (-row["priority_score"], row["intervention_id"]))
 
 
-def render_recommendations_report(rows: List[Dict[str, Any]], run_date: str) -> str:
+def render_recommendations_report(rows: list[dict[str, Any]], run_date: str) -> str:
     """Render the human-readable recommendations report for the current catalog snapshot."""
     eligible = [row for row in rows if row["readiness"] == "approval_gate_eligible"]
     enrich_only = [row for row in rows if row["readiness"] != "approval_gate_eligible"]
@@ -142,7 +142,7 @@ def render_recommendations_report(rows: List[Dict[str, Any]], run_date: str) -> 
 
 
 def write_recommendations_report(
-    rows: List[Dict[str, Any]],
+    rows: list[dict[str, Any]],
     project_root: Path | None = None,
     run_date: str | None = None,
 ) -> Path:
@@ -157,7 +157,7 @@ def write_recommendations_report(
     return path
 
 
-def build_and_write_recommendations(project_root: Path | None = None, run_date: str | None = None) -> Dict[str, str]:
+def build_and_write_recommendations(project_root: Path | None = None, run_date: str | None = None) -> dict[str, str]:
     """Run the Phase 6 recommendation pipeline for an exact run_date or latest available catalog."""
     root = project_root or _project_root()
     catalog_path = _resolve_catalog_path_for_run_date(run_date, root) if run_date else _resolve_latest_catalog_path(root)

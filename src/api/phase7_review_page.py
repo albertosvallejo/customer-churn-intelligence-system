@@ -2,30 +2,21 @@ import html
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from api.phase7_reporting_page import (
-    DASHBOARD_ROUTE,
-    NEW_ACTIONS_ROUTE,
-    TESTED_ACTIONS_ROUTE,
     _base_styles,
-    _fmt,
     _format_dt,
     _format_percent,
-    _render_history_rows,
-    _render_sidebar,
-    _render_synthetic_banner,
     _result_label,
-    _status_label,
     _title_case_kpi,
 )
-from evidence.phase7_artifacts import SYNTHETIC_WARNING, resolve_phase7_mode
+from evidence.phase7_artifacts import resolve_phase7_mode
 from evidence.phase7_integration import (
     build_phase7_post_test_decision_queue,
     load_integrated_actions,
     load_phase7_action_history,
 )
-
 
 TECHNICAL_REFRESH_TOOLTIP = (
     "This page refreshes after the same user submits a decision. "
@@ -37,12 +28,12 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _proposal_title(action: Dict[str, Any]) -> str:
+def _proposal_title(action: dict[str, Any]) -> str:
     title = str(action.get("article_title") or "").strip()
     return title or str(action.get("proposal_id") or action.get("action_id") or "Untitled proposal")
 
 
-def _proposal_recommended_action(action: Dict[str, Any]) -> str:
+def _proposal_recommended_action(action: dict[str, Any]) -> str:
     return str(action.get("recommended_action") or "").strip() or "—"
 
 
@@ -56,11 +47,11 @@ def _business_label_for_kpi(value: str) -> str:
     return mapping.get(key, _title_case_kpi(key)) if key else "—"
 
 
-def _proposal_source(action: Dict[str, Any]) -> str:
+def _proposal_source(action: dict[str, Any]) -> str:
     return str(action.get("source_name") or "").strip() or "Unknown source"
 
 
-def _status_from_action(action: Dict[str, Any]) -> str:
+def _status_from_action(action: dict[str, Any]) -> str:
     lifecycle = str(action.get("lifecycle_state") or "").lower()
     latest_verdict = str(action.get("latest_verdict") or "")
     if lifecycle == "active_winner":
@@ -74,35 +65,35 @@ def _status_from_action(action: Dict[str, Any]) -> str:
     return "Pending of more data"
 
 
-def _result_from_action(action: Dict[str, Any]) -> str:
+def _result_from_action(action: dict[str, Any]) -> str:
     latest_verdict = str(action.get("latest_verdict") or "")
     if latest_verdict:
         return _result_label(latest_verdict)
     return "Not enough data yet"
 
 
-def _test_result_from_action(action: Dict[str, Any]) -> str:
+def _test_result_from_action(action: dict[str, Any]) -> str:
     result = _result_from_action(action)
     if result == "Not enough data yet":
         return "—"
     return _format_percent(action.get("latest_conversion_lift") or action.get("conversion_lift"))
 
 
-def _guardrail_tooltip(action: Dict[str, Any]) -> str:
+def _guardrail_tooltip(action: dict[str, Any]) -> str:
     if bool(action.get("guardrail_breach")):
         return "Risk detected in a monitored guardrail metric."
     return "All monitored guardrails remained within threshold."
 
 
-def _build_tested_action_rows(post_test_queue: Dict[str, Any], integrated_actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
+def _build_tested_action_rows(post_test_queue: dict[str, Any], integrated_actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for pending in post_test_queue.get("pending_decisions", []):
         action = next((row for row in integrated_actions if row.get("action_id") == pending.get("action_id")), {})
         candidate_incumbents = pending.get("candidate_incumbents") or []
         previous_action = candidate_incumbents[0] if candidate_incumbents else {}
         allowed_comparison_outcomes = pending.get("allowed_comparison_outcomes") or []
         allowed_decisions_by_comparison_outcome = pending.get("allowed_decisions_by_comparison_outcome") or {}
-        missing_fields: List[str] = []
+        missing_fields: list[str] = []
         if not candidate_incumbents:
             missing_fields.append("current action comparison")
         if not allowed_comparison_outcomes:
@@ -143,14 +134,14 @@ def _build_tested_action_rows(post_test_queue: Dict[str, Any], integrated_action
     return rows
 
 
-def _build_new_action_rows(integrated_actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    rows: List[Dict[str, Any]] = []
+def _build_new_action_rows(integrated_actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
     for action in integrated_actions:
         if action.get("approval_status") != "pending_review":
             continue
         recommended_action = _proposal_recommended_action(action)
         lifecycle_state = str(action.get("lifecycle_state") or "pending_review")
-        missing_fields: List[str] = []
+        missing_fields: list[str] = []
         if recommended_action == "—":
             missing_fields.append("recommended action")
         can_review = not missing_fields
@@ -172,13 +163,13 @@ def _build_new_action_rows(integrated_actions: List[Dict[str, Any]]) -> List[Dic
     return rows
 
 
-def _build_history_rows_from_integrated(history: List[Dict[str, Any]], integrated_actions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _build_history_rows_from_integrated(history: list[dict[str, Any]], integrated_actions: list[dict[str, Any]]) -> list[dict[str, Any]]:
     from api.phase7_reporting_page import _build_history_rows
 
     return _build_history_rows(history, integrated_actions)
 
 
-def build_phase7_review_page_view_model(project_root: Path, run_date: str | None = None, mode: str | None = None) -> Dict[str, Any]:
+def build_phase7_review_page_view_model(project_root: Path, run_date: str | None = None, mode: str | None = None) -> dict[str, Any]:
     resolved_mode = resolve_phase7_mode(mode)
     integrated = load_integrated_actions(project_root, run_date, resolved_mode)
     post_test_queue = build_phase7_post_test_decision_queue(
@@ -204,8 +195,8 @@ def build_phase7_review_page_view_model(project_root: Path, run_date: str | None
     }
 
 
-def _render_tested_action_table_rows(rows: List[Dict[str, Any]]) -> str:
-    rendered: List[str] = []
+def _render_tested_action_table_rows(rows: list[dict[str, Any]]) -> str:
+    rendered: list[str] = []
     for row in rows:
         result_tone = "positive" if row["result"] == "New proposal wins" else "neutral"
         test_result = str(row["test_result"])
@@ -238,7 +229,7 @@ def _render_tested_action_table_rows(rows: List[Dict[str, Any]]) -> str:
     return "".join(rendered) if rendered else "<tr><td colspan='8'>No tested actions are pending approval.</td></tr>"
 
 
-def _render_new_action_cards(rows: List[Dict[str, Any]]) -> str:
+def _render_new_action_cards(rows: list[dict[str, Any]]) -> str:
     if not rows:
         return "<div class='empty-state'>No proposals are waiting to enter statistical test.</div>"
     rendered = []
@@ -306,7 +297,7 @@ def _review_page_styles() -> str:
 """
 
 
-def _review_page_script(kind: str, config: Dict[str, str]) -> str:
+def _review_page_script(kind: str, config: dict[str, str]) -> str:
     return f"""
 <script>
 window.__CUSTOMER_CHURN_REVIEW__ = {json.dumps(config)};

@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 LOGGER = logging.getLogger(__name__)
 
@@ -62,11 +62,11 @@ def _load_json(path: Path) -> Any:
         return json.load(handle)
 
 
-def _missing_keys(payload: Dict[str, Any], required_keys: set[str]) -> List[str]:
+def _missing_keys(payload: dict[str, Any], required_keys: set[str]) -> list[str]:
     return sorted(key for key in required_keys if key not in payload)
 
 
-def _validate_allowlist(allowlist: Dict[str, Any]) -> Dict[str, Any]:
+def _validate_allowlist(allowlist: dict[str, Any]) -> dict[str, Any]:
     missing = _missing_keys(allowlist, _REQUIRED_ALLOWLIST_KEYS)
     if missing:
         raise ValueError(f"Phase 6 allowlist missing required keys: {', '.join(missing)}")
@@ -105,7 +105,7 @@ def _validate_allowlist(allowlist: Dict[str, Any]) -> Dict[str, Any]:
         if collection is None:
             continue
         if not isinstance(collection, list):
-            raise ValueError(f"{collection_name} must be a list when present")
+            raise ValueError(f"{collection_name} must be a list when present")  # noqa: TRY004
         for index, entry in enumerate(collection, start=1):
             missing_source_keys = _missing_keys(entry, _REQUIRED_SOURCE_DISCOVERY_KEYS)
             if missing_source_keys:
@@ -154,7 +154,7 @@ def _validate_allowlist(allowlist: Dict[str, Any]) -> Dict[str, Any]:
     return allowlist
 
 
-def _validate_seed_entries(seed_entries: List[Dict[str, Any]], allowlist: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _validate_seed_entries(seed_entries: list[dict[str, Any]], allowlist: dict[str, Any]) -> list[dict[str, Any]]:
     known_levels = set(allowlist["source_levels"].keys())
     for index, entry in enumerate(seed_entries, start=1):
         missing = _missing_keys(entry, _REQUIRED_SEED_KEYS)
@@ -168,14 +168,14 @@ def _validate_seed_entries(seed_entries: List[Dict[str, Any]], allowlist: Dict[s
     return seed_entries
 
 
-def load_allowlist(path: Path | None = None) -> Dict[str, Any]:
+def load_allowlist(path: Path | None = None) -> dict[str, Any]:
     """Load and validate the Phase 6 source-governance allowlist defined in Sub-phase 6.1."""
     target = path or (_project_root() / "config" / "evidence_sources_allowlist.yaml")
     LOGGER.info("Loading Phase 6 allowlist from %s", target)
     return _validate_allowlist(_load_json(target))
 
 
-def load_seed_evidence(path: Path | None = None) -> List[Dict[str, Any]]:
+def load_seed_evidence(path: Path | None = None) -> list[dict[str, Any]]:
     """Load the Phase 6 seed evidence baseline used by the bootstrap catalog slice."""
     target = path or (_project_root() / "data" / "interim" / "phase6_seed_evidence.json")
     LOGGER.info("Loading Phase 6 seed evidence from %s", target)
@@ -186,7 +186,7 @@ def _bounded_score(score: str, ceiling: str) -> str:
     return _RANK_SCORE[min(_SCORE_RANK[score], _SCORE_RANK[ceiling])]
 
 
-def derive_confidence_score(entry: Dict[str, Any], confidence_ceiling: str) -> str:
+def derive_confidence_score(entry: dict[str, Any], confidence_ceiling: str) -> str:
     """Apply the deterministic confidence rules from the Phase 6 spec bootstrap slice."""
     base = _STUDY_BASE_SCORE.get(entry.get("study_design"), "low")
     peer_review_status = entry.get("peer_review_status", "none")
@@ -199,7 +199,7 @@ def derive_confidence_score(entry: Dict[str, Any], confidence_ceiling: str) -> s
     return _bounded_score(base, confidence_ceiling)
 
 
-def derive_actionability_score(entry: Dict[str, Any]) -> str:
+def derive_actionability_score(entry: dict[str, Any]) -> str:
     """Score actionability from actionable-element completeness, independent of confidence."""
     elements = entry.get("actionable_elements") or {}
     populated = sum(1 for value in elements.values() if value not in (None, "", [], {}))
@@ -211,17 +211,17 @@ def derive_actionability_score(entry: Dict[str, Any]) -> str:
 
 
 def build_catalog_entries(
-    allowlist: Dict[str, Any],
-    seed_entries: List[Dict[str, Any]],
+    allowlist: dict[str, Any],
+    seed_entries: list[dict[str, Any]],
     catalog_run_date: str,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Build the append-only bootstrap evidence catalog entries defined in Sub-phase 6.2."""
     LOGGER.info("Building bootstrap Phase 6 evidence catalog for %s", catalog_run_date)
     validated_allowlist = _validate_allowlist(allowlist)
     validated_seed_entries = _validate_seed_entries(seed_entries, validated_allowlist)
     levels = validated_allowlist["source_levels"]
     approval = validated_allowlist["approval"]
-    catalog_entries: List[Dict[str, Any]] = []
+    catalog_entries: list[dict[str, Any]] = []
 
     for entry in validated_seed_entries:
         source_level = entry["source_level"]
@@ -244,8 +244,8 @@ def build_catalog_entries(
 
 
 def render_catalog_summary(
-    catalog_entries: List[Dict[str, Any]],
-    allowlist: Dict[str, Any],
+    catalog_entries: list[dict[str, Any]],
+    allowlist: dict[str, Any],
     catalog_run_date: str,
 ) -> str:
     """Render the human-readable summary that explains the Phase 6 seed-baseline catalog snapshot."""
@@ -289,11 +289,11 @@ def render_catalog_summary(
 
 
 def write_catalog_snapshot(
-    catalog_entries: List[Dict[str, Any]],
+    catalog_entries: list[dict[str, Any]],
     summary_markdown: str,
     project_root: Path | None = None,
     catalog_run_date: str | None = None,
-) -> Tuple[Path, Path]:
+) -> tuple[Path, Path]:
     """Write the immutable dated catalog snapshot and fail if that dated snapshot already exists."""
     root = project_root or _project_root()
     run_date = catalog_run_date or datetime.now(timezone.utc).strftime("%Y%m%d")
@@ -315,7 +315,7 @@ def write_catalog_snapshot(
     return catalog_path, summary_path
 
 
-def build_and_write_catalog(project_root: Path | None = None, run_date: str | None = None) -> Dict[str, str]:
+def build_and_write_catalog(project_root: Path | None = None, run_date: str | None = None) -> dict[str, str]:
     """Run the local Phase 6 bootstrap pipeline and return the generated artifact paths."""
     root = project_root or _project_root()
     catalog_run_date = run_date or datetime.now(timezone.utc).strftime("%Y%m%d")

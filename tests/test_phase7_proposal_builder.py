@@ -150,6 +150,8 @@ class TestPhase7ProposalBuilder(unittest.TestCase):
             "api_key_source": "/tmp/.env",
             "model": "gpt-4.1-nano-2025-04-14",
             "temperature": 0.0,
+            "llm_mode": "live",
+            "fake_llm_enabled": False,
         }), patch("evidence.phase7_proposal_builder.urllib.request.urlopen", side_effect=lambda *args, **kwargs: FakeResponse(next(responses))):
             result = synthesize_article_with_openai(article, project_root=PROJECT_ROOT)
 

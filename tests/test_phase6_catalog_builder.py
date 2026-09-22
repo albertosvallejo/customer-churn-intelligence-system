@@ -9,7 +9,11 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from evidence.catalog_builder import build_and_write_catalog, build_catalog_entries, render_catalog_summary
+from evidence.catalog_builder import (
+    build_and_write_catalog,
+    build_catalog_entries,
+    render_catalog_summary,
+)
 
 
 class TestPhase6CatalogBuilder(unittest.TestCase):

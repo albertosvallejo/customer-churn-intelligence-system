@@ -5,11 +5,12 @@ import logging
 import os
 import re
 import string
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Tuple
 import urllib.error
 import urllib.request
+from collections.abc import Callable
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
 from evidence.phase7_artifacts import (
     SYNTHETIC_WARNING,
@@ -52,19 +53,19 @@ def _resolve_snapshot_path(project_root: Path | None = None, run_date: str | Non
     return candidates[-1]
 
 
-def load_snapshot(path: Path) -> Dict[str, Any]:
+def load_snapshot(path: Path) -> dict[str, Any]:
     LOGGER.info("Loading Phase 7 source snapshot from %s", path)
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def extract_numeric_claims(text: str | None) -> List[str]:
+def extract_numeric_claims(text: str | None) -> list[str]:
     if not text:
         return []
     return _NUMERIC_PATTERN.findall(text)
 
 
-def _load_env_file(env_path: Path) -> Dict[str, str]:
-    payload: Dict[str, str] = {}
+def _load_env_file(env_path: Path) -> dict[str, str]:
+    payload: dict[str, str] = {}
     if not env_path.exists():
         return payload
     for line in env_path.read_text(encoding="utf-8").splitlines():
@@ -76,13 +77,13 @@ def _load_env_file(env_path: Path) -> Dict[str, str]:
     return payload
 
 
-def resolve_openai_runtime_config(project_root: Path | None = None) -> Dict[str, Any]:
+def resolve_openai_runtime_config(project_root: Path | None = None) -> dict[str, Any]:
     root = project_root or _project_root()
     env_candidates = [root / ".env"]
     key = os.environ.get("OPENAI_API_KEY")
     source = "process_env" if key else None
-    env_payload: Dict[str, str] = {}
-    merged_env_payload: Dict[str, str] = {}
+    env_payload: dict[str, str] = {}
+    merged_env_payload: dict[str, str] = {}
     if not key:
         for candidate in env_candidates:
             candidate_payload = _load_env_file(candidate)
@@ -148,16 +149,16 @@ def resolve_openai_runtime_config(project_root: Path | None = None) -> Dict[str,
 
 
 def synthesize_article_with_fake_llm(
-    article: Dict[str, Any],
-    runtime: Dict[str, Any],
-) -> Dict[str, Any]:
+    article: dict[str, Any],
+    runtime: dict[str, Any],
+) -> dict[str, Any]:
     title = (article.get("title") or "").strip()
     summary = (article.get("summary") or "").strip()
     combined_anchor = " ".join(part for part in [title, summary] if part).strip()
     numeric_claims_used = list(dict.fromkeys(extract_numeric_claims(combined_anchor)))
     summary_for_business = summary or title or "No source summary was provided."
-    pros: List[str] = []
-    cons: List[str] = []
+    pros: list[str] = []
+    cons: list[str] = []
 
     if numeric_claims_used:
         pros.append("The source includes explicit numeric claims that can be reviewed deterministically in CI.")
@@ -198,10 +199,10 @@ def synthesize_article_with_fake_llm(
 
 
 def synthesize_article_with_openai(
-    article: Dict[str, Any],
+    article: dict[str, Any],
     project_root: Path | None = None,
     timeout_seconds: int = 60,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     runtime = resolve_openai_runtime_config(project_root)
     if runtime.get("fake_llm_enabled"):
         return synthesize_article_with_fake_llm(article, runtime)
@@ -250,7 +251,7 @@ def synthesize_article_with_openai(
         },
         method="POST",
     )
-    last_result: Dict[str, Any] | None = None
+    last_result: dict[str, Any] | None = None
     for attempt in range(2):
         try:
             with urllib.request.urlopen(request, timeout=timeout_seconds) as response:
@@ -294,11 +295,11 @@ def synthesize_article_with_openai(
 
 
 def build_action_drafts(
-    snapshot: Dict[str, Any],
+    snapshot: dict[str, Any],
     project_root: Path | None = None,
-    synthesizer: Callable[[Dict[str, Any], Path | None], Dict[str, Any]] | None = None,
-) -> List[Dict[str, Any]]:
-    drafts: List[Dict[str, Any]] = []
+    synthesizer: Callable[[dict[str, Any], Path | None], dict[str, Any]] | None = None,
+) -> list[dict[str, Any]]:
+    drafts: list[dict[str, Any]] = []
     article_synthesizer = synthesizer or synthesize_article_with_openai
     for idx, article in enumerate(snapshot.get("in_scope_articles", []), start=1):
         summary = article.get("summary") or ""
@@ -344,8 +345,8 @@ def _normalize_claim_comparison_text(text: str) -> str:
     return normalized.strip(string.whitespace)
 
 
-def validate_numeric_coherence(drafts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    validation_rows: List[Dict[str, Any]] = []
+def validate_numeric_coherence(drafts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    validation_rows: list[dict[str, Any]] = []
     for draft in drafts:
         citation_anchor = draft.get("citation_anchor") or ""
         normalized_citation_anchor = _normalize_claim_comparison_text(citation_anchor)
@@ -380,7 +381,7 @@ def validate_numeric_coherence(drafts: List[Dict[str, Any]]) -> List[Dict[str, A
     return validation_rows
 
 
-def render_action_drafts_report(drafts: List[Dict[str, Any]], validation_rows: List[Dict[str, Any]], run_date: str) -> str:
+def render_action_drafts_report(drafts: list[dict[str, Any]], validation_rows: list[dict[str, Any]], run_date: str) -> str:
     lines = [
         "# PHASE 7 ACTION DRAFTS",
         "",
@@ -420,12 +421,12 @@ def render_action_drafts_report(drafts: List[Dict[str, Any]], validation_rows: L
 
 
 def write_action_drafts(
-    drafts: List[Dict[str, Any]],
-    validation_rows: List[Dict[str, Any]],
+    drafts: list[dict[str, Any]],
+    validation_rows: list[dict[str, Any]],
     project_root: Path | None = None,
     run_date: str | None = None,
     mode: str | None = None,
-) -> Tuple[Path, Path]:
+) -> tuple[Path, Path]:
     root = project_root or _project_root()
     effective_run_date = run_date or datetime.now(timezone.utc).strftime("%Y%m%d")
     resolved_mode = resolve_phase7_mode(mode)
@@ -455,9 +456,9 @@ def write_action_drafts(
 def build_and_write_action_drafts(
     project_root: Path | None = None,
     run_date: str | None = None,
-    synthesizer: Callable[[Dict[str, Any], Path | None], Dict[str, Any]] | None = None,
+    synthesizer: Callable[[dict[str, Any], Path | None], dict[str, Any]] | None = None,
     mode: str | None = None,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     root = project_root or _project_root()
     resolved_mode = resolve_phase7_mode(mode)
     snapshot_path = _resolve_snapshot_path(root, run_date, resolved_mode)

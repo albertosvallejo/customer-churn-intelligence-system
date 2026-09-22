@@ -1,12 +1,16 @@
 import json
 import os
+import socket
 import sys
 import tempfile
 import threading
+import time
 import unittest
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
+
+import uvicorn
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SRC_DIR = PROJECT_ROOT / "src"
@@ -17,10 +21,13 @@ _tmpdir = tempfile.TemporaryDirectory()
 os.environ["CHURN_DB_URL"] = f"sqlite:///{Path(_tmpdir.name) / 'test_ops.sqlite'}"
 os.environ["PHASE7_REVIEW_TOKEN"] = "phase7-contract-token"
 
-import api.churn_service as churn_service
-from api.churn_service import create_server
+from api import churn_service
+from api.fastapi_app import app
 from evidence.phase7_artifacts import REAL_MODE
-from evidence.phase7_integration import build_integrated_actions, load_integrated_actions
+from evidence.phase7_integration import (
+    build_integrated_actions,
+    load_integrated_actions,
+)
 
 
 class TestPhase7HttpContract(unittest.TestCase):
@@ -29,20 +36,44 @@ class TestPhase7HttpContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._previous_mode = os.environ.pop("MODE", None)
-        cls.server = create_server(host="127.0.0.1", port=0)
-        cls.port = cls.server.server_address[1]
-        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls._previous_app_env = os.environ.get("APP_ENV")
+        os.environ["APP_ENV"] = "test"
+        churn_service.DEFAULT_DB_URL = os.environ["CHURN_DB_URL"]
+        churn_service._ops_engine().dispose()
+        churn_service._ops_engine.cache_clear()
+
+        cls.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        cls.socket.bind(("127.0.0.1", 0))
+        cls.socket.listen(5)
+        cls.port = cls.socket.getsockname()[1]
+        config = uvicorn.Config(app, log_level="warning", lifespan="off")
+        cls.server = uvicorn.Server(config)
+        cls.thread = threading.Thread(
+            target=cls.server.run,
+            kwargs={"sockets": [cls.socket]},
+            daemon=True,
+        )
         cls.thread.start()
+        for _ in range(100):
+            if cls.server.started:
+                break
+            time.sleep(0.05)
+        else:
+            raise RuntimeError("FastAPI/Uvicorn test server did not start")
         cls._prepare_phase7_fixture(cls.RUN_DATE)
 
     @classmethod
     def tearDownClass(cls):
-        cls.server.shutdown()
-        cls.server.server_close()
-        cls.thread.join(timeout=2)
+        cls.server.should_exit = True
+        cls.thread.join(timeout=5)
+        cls.socket.close()
         cls._cleanup_phase7_fixture(cls.RUN_DATE)
         if cls._previous_mode is not None:
             os.environ["MODE"] = cls._previous_mode
+        if cls._previous_app_env is None:
+            os.environ.pop("APP_ENV", None)
+        else:
+            os.environ["APP_ENV"] = cls._previous_app_env
         cached_engine = churn_service._ops_engine()
         cached_engine.dispose()
         churn_service._ops_engine.cache_clear()

@@ -1,7 +1,7 @@
 import json
 import logging
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -68,7 +68,7 @@ def build_daily_status_snapshot() -> dict:
     cycle_gap_days = None
     if latest_logged_cycle_date:
         try:
-            cycle_gap_days = (date.today() - date.fromisoformat(str(latest_logged_cycle_date))).days
+            cycle_gap_days = (datetime.now(timezone.utc).date() - date.fromisoformat(str(latest_logged_cycle_date))).days
         except ValueError:
             cycle_gap_days = None
 
