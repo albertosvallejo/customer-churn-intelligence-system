@@ -53,7 +53,7 @@ class TestCampaignKpis(unittest.TestCase):
             self.assertEqual(len(payload["holdout_lift"]), 1)
             self.assertEqual(payload["holdout_lift"][0]["risk_tier"], "HIGH")
             self.assertAlmostEqual(payload["holdout_lift"][0]["holdout_lift"], 1.0)
-            self.assertEqual(payload["label"], "[pre-holdout — attribution unconfirmed]")
+            self.assertEqual(payload["label"], "Simulated campaign baseline · pre-holdout internal monitor")
 
     def test_synthetic_parquet_contract_is_supported(self):
         actions_path = PROJECT_ROOT / "data" / "processed" / "retention_actions_synthetic_30d.parquet"

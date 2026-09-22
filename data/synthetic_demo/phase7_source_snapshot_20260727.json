@@ -1,0 +1,145 @@
+{
+  "mode": "synthetic_demo",
+  "warning": "DATOS SINTETICOS - NO SON RESULTADOS REALES",
+  "run_date": "20260727",
+  "checked_at": "2026-07-27T09:00:00Z",
+  "in_scope_articles": [
+    {
+      "source_name": "Nielsen Norman Group",
+      "domain": "www.nngroup.com",
+      "path_pattern": "/articles/",
+      "title": "Checkout CTA Microcopy: Urgency Framing Increases Completion (synthetic case study)",
+      "link": "https://www.nngroup.com/articles/checkout-cta-microcopy-synthetic-demo/",
+      "pubDate": "2026-06-02T00:00:00Z",
+      "description": "Synthetic multi-site study (n=1240 checkout sessions): changing the CTA text from 'Continue' to 'Complete secure purchase' increased checkout completion by 14.3%.",
+      "guid": "synthetic-nng-0001"
+    },
+    {
+      "source_name": "Baymard Institute",
+      "domain": "baymard.com",
+      "path_pattern": "/blog/",
+      "title": "Abandoned Cart Email Timing: 1-Hour Beats 24-Hour Delay (synthetic case study)",
+      "link": "https://baymard.com/blog/abandoned-cart-timing-synthetic-demo",
+      "pubDate": "2026-06-05T00:00:00Z",
+      "description": "Synthetic panel of 980 abandoned sessions: sending the reminder email after 1 hour instead of 24 hours lifted recovery rate by 9.6%.",
+      "guid": "synthetic-bay-0001"
+    },
+    {
+      "source_name": "Nielsen Norman Group",
+      "domain": "www.nngroup.com",
+      "path_pattern": "/articles/",
+      "title": "Checkout CTA Microcopy: Testing 'Buy Now' Against Baseline (synthetic follow-up)",
+      "link": "https://www.nngroup.com/articles/checkout-cta-buynow-synthetic-demo/",
+      "pubDate": "2026-06-08T00:00:00Z",
+      "description": "Synthetic follow-up test on 610 sessions: the label 'Buy now' increased completion by only 3.1%, a smaller lift than the previously implemented variant.",
+      "guid": "synthetic-nng-0002"
+    },
+    {
+      "source_name": "Nielsen Norman Group",
+      "domain": "www.nngroup.com",
+      "path_pattern": "/articles/",
+      "title": "Checkout CTA Microcopy: Countdown Timer Variant (synthetic proposal)",
+      "link": "https://www.nngroup.com/articles/checkout-cta-countdown-synthetic-demo/",
+      "pubDate": "2026-06-10T00:00:00Z",
+      "description": "Synthetic internal draft proposing a 15-second countdown timer next to the checkout button, projecting a hypothetical 5.4% lift based on 340 simulated sessions.",
+      "guid": "synthetic-nng-0003"
+    },
+    {
+      "source_name": "Baymard Institute",
+      "domain": "baymard.com",
+      "path_pattern": "/blog/",
+      "title": "Abandoned Cart Email Timing: Same-Day 6-Hour Delay Variant (synthetic proposal)",
+      "link": "https://baymard.com/blog/abandoned-cart-6h-synthetic-demo",
+      "pubDate": "2026-06-12T00:00:00Z",
+      "description": "Synthetic candidate test comparing a 6-hour delay against the current 1-hour benchmark, with an internal projection of a 2.2% lift over 415 simulated carts.",
+      "guid": "synthetic-bay-0002"
+    },
+    {
+      "source_name": "Baymard Institute",
+      "domain": "baymard.com",
+      "path_pattern": "/blog/",
+      "title": "Exit-Intent Discount Popups: Balancing Recovery and Margin (synthetic case study)",
+      "link": "https://baymard.com/blog/exit-intent-popup-synthetic-demo",
+      "pubDate": "2026-06-15T00:00:00Z",
+      "description": "Synthetic pilot on 500 sessions: an exit-intent 10% discount popup could recover 7.8% of abandoning visitors before they leave the site.",
+      "guid": "synthetic-bay-0003"
+    },
+    {
+      "source_name": "Nielsen Norman Group",
+      "domain": "www.nngroup.com",
+      "path_pattern": "/articles/",
+      "title": "Low-Stock Urgency Badges on Product Pages (synthetic mock trial)",
+      "link": "https://www.nngroup.com/articles/urgency-badge-synthetic-demo/",
+      "pubDate": "2026-06-18T00:00:00Z",
+      "description": "Synthetic mock trial of 275 product views: adding a 'Only 3 left in stock' badge increased add-to-cart rate by 4.9%.",
+      "guid": "synthetic-nng-0004"
+    },
+    {
+      "source_name": "Baymard Institute",
+      "domain": "baymard.com",
+      "path_pattern": "/blog/",
+      "title": "Free Shipping Threshold Banner Placement (synthetic in-progress test)",
+      "link": "https://baymard.com/blog/free-shipping-banner-synthetic-demo",
+      "pubDate": "2026-06-20T00:00:00Z",
+      "description": "Synthetic in-progress test on 640 sessions so far: provisional 6.0% lift in average order value when the free-shipping threshold banner is shown above the cart summary.",
+      "guid": "synthetic-bay-0004"
+    },
+    {
+      "source_name": "Nielsen Norman Group",
+      "domain": "www.nngroup.com",
+      "path_pattern": "/articles/",
+      "title": "Checkout Progress Indicator: Step Count Transparency (synthetic desk review)",
+      "link": "https://www.nngroup.com/articles/checkout-progress-synthetic-demo/",
+      "pubDate": "2026-06-22T00:00:00Z",
+      "description": "Early synthetic desk review (no live test yet): informal observation of 90 sessions suggests showing '2 of 3 steps completed' could reduce checkout abandonment by an estimated 8%.",
+      "guid": "synthetic-nng-0005"
+    }
+  ],
+  "out_of_scope_sources": [
+    {
+      "source_name": "ResearchGate",
+      "domain": "researchgate.net",
+      "reason": "ToS Seccion 4 prohibe explicitamente robots, scripts, crawlers y cualquier medio automatizado de acceso/copia/extraccion (1.1.1)."
+    },
+    {
+      "source_name": "CXL",
+      "domain": "cxl.com",
+      "reason": "robots.txt de /blog/ bloquea el rastreo (1.1.1)."
+    },
+    {
+      "source_name": "SSRN",
+      "domain": "papers.ssrn.com",
+      "reason": "ToS prohibe consultas automatizadas; ademas bloqueo tecnico 403 confirmado en fetch real (1.1.2-bis)."
+    },
+    {
+      "source_name": "McKinsey Insights",
+      "domain": "www.mckinsey.com",
+      "reason": "ToS Seccion 3 prohibe explicitamente acceso/extraccion automatizada o manual sin permiso escrito (1.1.2-bis)."
+    },
+    {
+      "source_name": "Omnisend",
+      "domain": "www.omnisend.com",
+      "reason": "ToS prohibe agentes/scripts automaticos y data mining (1.1.2-bis)."
+    },
+    {
+      "source_name": "Klaviyo",
+      "domain": "www.klaviyo.com",
+      "reason": "ToS prohibe robot/spider/dispositivo automatico para acceder o copiar contenido (1.1.2-bis)."
+    },
+    {
+      "source_name": "Altcraft",
+      "domain": "altcraft.com",
+      "reason": "Sin clausula ToS explicita, pero sin via RSS confirmada y cita INT-04 sin URL validada (1.1.2-bis, 1.1.3)."
+    },
+    {
+      "source_name": "Google Scholar (author PDF)",
+      "domain": "scholar.google.com",
+      "reason": "No hay ninguna cita real seleccionada todavia; no aplica automatizacion a algo que no existe (1.1.2-bis)."
+    }
+  ],
+  "counters": {
+    "in_scope_count": 9,
+    "out_of_scope_count": 8,
+    "total_sources": 10
+  }
+}

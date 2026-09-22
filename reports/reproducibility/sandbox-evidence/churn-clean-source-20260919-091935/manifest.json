@@ -1,0 +1,10 @@
+{
+  "project": "customer-churn-intelligence-system",
+  "job_id": "churn-clean-source-20260919-091935",
+  "created_at": "2026-09-19T16:03:41+02:00",
+  "final_state": "PASS",
+  "file_count": 14,
+  "total_bytes": 18305,
+  "source_result_path": "/srv/repro-validation-runner/shared/results/churn-clean-source-20260919-091935",
+  "evidence_version": "evidence-mvp-v1"
+}

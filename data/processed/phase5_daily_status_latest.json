@@ -1,5 +1,5 @@
 {
-  "run_timestamp": "2026-07-24T10:50:32.497146+00:00",
+  "run_timestamp": "2026-07-30T12:04:55.109708+00:00",
   "gate": {
     "target_shadow_days": 14,
     "logged_shadow_days": 1,
@@ -23,7 +23,7 @@
     "active_triggers": [],
     "latest_shadow_cycle": "2026-05-27T00:00:00",
     "latest_logged_cycle_date": "2026-06-05",
-    "latest_logged_decision_ts": "2026-07-24T10:50:32"
+    "latest_logged_decision_ts": "2026-07-30T12:04:54"
   },
   "latest_cycle_review": {
     "cycle_date": "2026-06-05",
@@ -33,19 +33,19 @@
     "match": null,
     "critical_divergence": false,
     "rationale": "Synthetic governance baseline shows no active triggers.",
-    "record_id": "fe8d874e-b311-4417-9a36-585986d6873e"
+    "record_id": "ec73cf47-4024-496d-a2e4-e9ab16e1db23"
   },
   "source_integrity": {
-    "db_url": "sqlite:////tmp/tmp0anor5xj/test_ops.sqlite",
-    "canonical_db_url": "sqlite:////data/.openclaw/workspace/projects/TFM/daily-customer-churn-predictor/data/raw/churn_sqlite_db.sqlite",
+    "db_url": "sqlite:////tmp/tmptrztmafm/test_ops.sqlite",
+    "canonical_db_url": "sqlite:////app/data/raw/churn_sqlite_db.sqlite",
     "is_canonical_db": false,
     "is_temp_db": true,
-    "latest_logged_cycle_gap_days": 49,
+    "latest_logged_cycle_gap_days": 55,
     "stale_shadow_log": true
   },
   "next_honest_step": "Keep accumulating valid shadow days and avoid treating preparation artifacts as gate closure.",
   "source": {
-    "db_url": "sqlite:////tmp/tmp0anor5xj/test_ops.sqlite",
+    "db_url": "sqlite:////tmp/tmptrztmafm/test_ops.sqlite",
     "decision_log_table": "agent_decision_log",
     "behavior_spec": "reports/phase5_behavior_spec.md"
   }

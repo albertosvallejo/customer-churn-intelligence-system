@@ -1,8 +1,8 @@
 [
   {
-    "proposal_id": "p6-20260724-ce15b45a",
+    "proposal_id": "p6-20260724-8f1fb99f",
     "proposal_run_date": "20260724",
-    "created_at": "2026-07-24T10:39:53Z",
+    "created_at": "2026-07-30T12:04:54Z",
     "intervention_id": "INT-02",
     "source_name": "ResearchGate",
     "ref_id": "[4]",
@@ -17,9 +17,9 @@
     "incentive_hypothesis": "repeat_offer",
     "evidence_note": "Inherited static reference for reminder frequency / retention sequence evidence.",
     "effect_size_text": "Inherited study anchor with reported T=2.87, p=0.004 in the Phase 5 catalog.",
-    "decision_status": "pending",
-    "decision_reason": null,
-    "decided_by": null,
-    "decision_ts": null
+    "decision_status": "approved",
+    "decision_reason": "Approved for simulated launch",
+    "decided_by": "architect.openclaw@gmail.com",
+    "decision_ts": "2026-07-30T12:04:54Z"
   }
 ]

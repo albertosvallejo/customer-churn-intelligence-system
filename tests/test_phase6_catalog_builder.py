@@ -32,6 +32,41 @@ class TestPhase6CatalogBuilder(unittest.TestCase):
                     "single_approver": "architect.openclaw@gmail.com",
                     "ab_mode": "simulated",
                 },
+                "source_scraping_registry": {
+                    "path": "data/interim/phase7_source_scraping_registry.json",
+                    "key_fields": ["domain", "path_pattern"],
+                    "required_record_fields": [
+                        "domain",
+                        "path_pattern",
+                        "checked_at",
+                        "scraping_permitido",
+                        "method",
+                        "note",
+                    ],
+                    "allowed_results": ["no", "null+flag", "solo_RSS_API", "sí"],
+                },
+                "seed_sources": [
+                    {
+                        "source_name": "ResearchGate",
+                        "source_level": "A",
+                        "peer_review_status": "preprint",
+                        "open_access_verified": True,
+                        "used_in": ["INT-02"],
+                        "seed_role": "baseline_reference",
+                        "source_domains": ["researchgate.net"],
+                        "automation_scope": {
+                            "pipeline_status": "out_of_scope",
+                            "allowed_channel": "manual_only",
+                            "scope_note": "manual only",
+                        },
+                        "scraping_governance": {
+                            "mode": "observed_per_article",
+                            "scraping_permitido": "no",
+                            "registry_key": "researchgate.net::/publication/",
+                            "status_note": "blocked by tos",
+                        },
+                    }
+                ],
             }
             seed_entries = [
                 {
@@ -123,6 +158,41 @@ class TestPhase6CatalogBuilder(unittest.TestCase):
                     "single_approver": "architect.openclaw@gmail.com",
                     "ab_mode": "simulated",
                 },
+                "source_scraping_registry": {
+                    "path": "data/interim/phase7_source_scraping_registry.json",
+                    "key_fields": ["domain", "path_pattern"],
+                    "required_record_fields": [
+                        "domain",
+                        "path_pattern",
+                        "checked_at",
+                        "scraping_permitido",
+                        "method",
+                        "note",
+                    ],
+                    "allowed_results": ["no", "null+flag", "solo_RSS_API", "sí"],
+                },
+                "seed_sources": [
+                    {
+                        "source_name": "ResearchGate",
+                        "source_level": "A",
+                        "peer_review_status": "published",
+                        "open_access_verified": True,
+                        "used_in": ["INT-02"],
+                        "seed_role": "baseline_reference",
+                        "source_domains": ["researchgate.net"],
+                        "automation_scope": {
+                            "pipeline_status": "out_of_scope",
+                            "allowed_channel": "manual_only",
+                            "scope_note": "manual only",
+                        },
+                        "scraping_governance": {
+                            "mode": "observed_per_article",
+                            "scraping_permitido": "no",
+                            "registry_key": "researchgate.net::/publication/",
+                            "status_note": "blocked by tos",
+                        },
+                    }
+                ],
             }
             seed_entries = [
                 {
@@ -163,6 +233,41 @@ class TestPhase6CatalogBuilder(unittest.TestCase):
                 "single_approver": "architect.openclaw@gmail.com",
                 "ab_mode": "simulated",
             },
+            "source_scraping_registry": {
+                "path": "data/interim/phase7_source_scraping_registry.json",
+                "key_fields": ["domain", "path_pattern"],
+                "required_record_fields": [
+                    "domain",
+                    "path_pattern",
+                    "checked_at",
+                    "scraping_permitido",
+                    "method",
+                    "note",
+                ],
+                "allowed_results": ["no", "null+flag", "solo_RSS_API", "sí"],
+            },
+            "seed_sources": [
+                {
+                    "source_name": "ResearchGate",
+                    "source_level": "A",
+                    "peer_review_status": "published",
+                    "open_access_verified": True,
+                    "used_in": ["INT-02"],
+                    "seed_role": "baseline_reference",
+                    "source_domains": ["researchgate.net"],
+                    "automation_scope": {
+                        "pipeline_status": "out_of_scope",
+                        "allowed_channel": "manual_only",
+                        "scope_note": "manual only",
+                    },
+                    "scraping_governance": {
+                        "mode": "observed_per_article",
+                        "scraping_permitido": "no",
+                        "registry_key": "researchgate.net::/publication/",
+                        "status_note": "blocked by tos",
+                    },
+                }
+            ],
         }
         seed_entries = [
             {
@@ -199,11 +304,103 @@ class TestPhase6CatalogBuilder(unittest.TestCase):
                 "single_approver": "architect.openclaw@gmail.com",
                 "ab_mode": "simulated",
             },
+            "source_scraping_registry": {
+                "path": "data/interim/phase7_source_scraping_registry.json",
+                "key_fields": ["domain", "path_pattern"],
+                "required_record_fields": [
+                    "domain",
+                    "path_pattern",
+                    "checked_at",
+                    "scraping_permitido",
+                    "method",
+                    "note",
+                ],
+                "allowed_results": ["no", "null+flag", "solo_RSS_API", "sí"],
+            },
         }
 
         summary = render_catalog_summary([], allowlist, "20260721")
         self.assertIn("Entries: 0", summary)
         self.assertIn("Interventions covered:", summary)
+
+    def test_build_and_write_catalog_rejects_invalid_scraping_governance_outcome(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "config").mkdir()
+            (root / "data" / "interim").mkdir(parents=True)
+
+            allowlist = {
+                "phase": "phase6",
+                "cadence": "monthly",
+                "open_access_only": True,
+                "source_levels": {"A": {"confidence_ceiling": "high"}},
+                "approval": {
+                    "mode": "dashboard",
+                    "single_approver": "architect.openclaw@gmail.com",
+                    "ab_mode": "simulated",
+                },
+                "source_scraping_registry": {
+                    "path": "data/interim/phase7_source_scraping_registry.json",
+                    "key_fields": ["domain", "path_pattern"],
+                    "required_record_fields": [
+                        "domain",
+                        "path_pattern",
+                        "checked_at",
+                        "scraping_permitido",
+                        "method",
+                        "note",
+                    ],
+                    "allowed_results": ["no", "null+flag", "solo_RSS_API", "sí"],
+                },
+                "seed_sources": [
+                    {
+                        "source_name": "ResearchGate",
+                        "source_level": "A",
+                        "peer_review_status": "published",
+                        "open_access_verified": True,
+                        "used_in": ["INT-02"],
+                        "seed_role": "baseline_reference",
+                        "source_domains": ["researchgate.net"],
+                        "automation_scope": {
+                            "pipeline_status": "out_of_scope",
+                            "allowed_channel": "manual_only",
+                            "scope_note": "manual only",
+                        },
+                        "scraping_governance": {
+                            "mode": "observed_per_article",
+                            "scraping_permitido": "maybe",
+                            "registry_key": "researchgate.net::/publication/",
+                            "status_note": "blocked by tos",
+                        },
+                    }
+                ],
+            }
+            seed_entries = [
+                {
+                    "entry_id": "seed-1",
+                    "ref_id": "[4]",
+                    "intervention_id": "INT-02",
+                    "source_name": "ResearchGate",
+                    "source_level": "A",
+                    "peer_review_status": "published",
+                    "study_design": "rct",
+                    "sample_size": 100,
+                    "publication_year": 2022,
+                    "effect_size": None,
+                    "effect_size_text": "anchor",
+                    "expected_lift": None,
+                    "actionable_elements": {"copy": "x", "channel": "email", "timing": "t", "incentive": "i"},
+                    "applicability_to_vivamarket": "high",
+                    "citation_status": "pending",
+                    "quote_or_anchor": "anchor",
+                }
+            ]
+
+            (root / "config" / "evidence_sources_allowlist.yaml").write_text(json.dumps(allowlist), encoding="utf-8")
+            (root / "data" / "interim" / "phase6_seed_evidence.json").write_text(json.dumps(seed_entries), encoding="utf-8")
+
+            with self.assertRaises(ValueError):
+                build_and_write_catalog(project_root=root, run_date="20260721")
 
 
 if __name__ == "__main__":

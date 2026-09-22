@@ -7,6 +7,9 @@ __pycache__/
 venv/
 .env
 .ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 
 # Data artifacts
 /data/interim/
@@ -18,6 +21,45 @@ data/raw/*.sqlite
 
 # Internal / operational files
 /_private/
+STATUS.md
+
+# Historical / private packages and artifacts
+cp4_cleanroom_package/
+cp5_external_validation_package/
+reports/archive/
+deploy/compose.prod.yml
+web/README.md
+Dockerfile
+assets/images/dashboard-mockup/
+assets/images/visual_identity_guide_v1.pdf
+assets/images/visual_identity_guide_v1.3.pdf
+n8n/*_20260519.json
+reports/phase7_integrated_actions_2099*.md
+data/synthetic_demo/synthetic_demo__phase7_integrated_actions_209901*.json
+phase6_action_plan_*
+phase7_action_plan_*
+diff_V13_V14.md
+
+# Local ad-hoc operational helpers not intended for public repo
+run_7_2_5a.sh
+docker-compose.cp2.local.yml
+docker-compose.7.2.5a.local.yml
+
+# Operational sync / temp residues
+tmp_*_drive_sync_report.json
+tmp_sync_probe.txt
+project_workspace_vs_drive_diff_only_changes.xlsx
+*.bak_openclaw
+*.bak-*
+assets/images/dashboard-mockup/.vinext
+
+# Restricted / runtime outputs
+logs/
+*.log
+*.pid
+tmp_test_outputs/
+*.sqlite-shm
+*.sqlite-wal
 
 # n8n drafts — only named canonical workflow files are versioned
 n8n/*.jsonl
@@ -27,21 +69,22 @@ notebooks/*.executed.ipynb
 notebooks/*.audit_run.ipynb
 notebooks/borrador notebook 01.txt
 
-# Historical report archive kept locally / privately only
-reports/archive/
-
 # OS / editors
 .DS_Store
 Thumbs.db
 desktop.ini
 .vscode/
 .idea/
-
-# Logs / runtime artifacts
-logs/
-*.log
-*.pid
-
-# Local runtime
-*.sqlite-shm
-*.sqlite-wal
+.env.*
+!.env.example
+/_release_candidates/
+/data/processed/
+reports/.release_candidate_*/
+reports/reproducibility/release_candidate_curated_*/
+reports/reproducibility/*release_candidate*_manifest.txt
+tmp/
+tmp_*
+*.tmp
+*.bak_*
+.venv-*/
+docker-compose.*.local.yml

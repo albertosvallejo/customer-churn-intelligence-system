@@ -1,0 +1,368 @@
+{
+  "mode": "synthetic_demo",
+  "warning": "DATOS SINTETICOS - NO SON RESULTADOS REALES",
+  "run_date": "20260727",
+  "generated_at": "2026-07-27T09:20:00Z",
+  "llm_integration_7_1_3_bis": {
+    "provider": "OpenAI (synthetic project key, own workspace + spend limit)",
+    "model": "gpt-4.1-mini (synthetic, per 7.1.3-bis)",
+    "temperature": 0.2,
+    "generated_at": "2026-07-27T09:15:00Z",
+    "note": "Pros/contras generados por simulacion de 7.1.3-bis para fines de demo; no es una llamada real a la API."
+  },
+  "drafts": [
+    {
+      "proposal_id": "p7-20260701-1a2b3c4d",
+      "source_name": "Nielsen Norman Group",
+      "article_title": "Checkout CTA Microcopy: Urgency Framing Increases Completion (synthetic case study)",
+      "article_url": "https://www.nngroup.com/articles/checkout-cta-microcopy-synthetic-demo/",
+      "published_at": "2026-06-02T00:00:00Z",
+      "summary_for_business": "Cambiar el texto del boton de checkout de 'Continue' a 'Complete secure purchase' aumento la tasa de finalizacion de compra en un estudio sintetico multi-sitio.",
+      "citation_anchor": "Across a synthetic sample of 1240 checkout sessions, changing the CTA text from 'Continue' to 'Complete secure purchase' increased checkout completion by 14.3%.",
+      "numeric_claims": [
+        "1240",
+        "14.3%"
+      ],
+      "pros": [
+        "Cambio de bajo coste de implementacion (solo copy, sin rediseno de flujo).",
+        "El anclaje textual reporta una muestra relativamente grande (1240 sesiones) para el tipo de test.",
+        "Coherente con patrones de microcopy de urgencia ya documentados en literatura de UX."
+      ],
+      "contras": [
+        "El estudio de origen es sintetico y de una sola fuente; no hay replicacion cruzada todavia.",
+        "No se reporta el guardrail de negocio (p.ej. tasa de devoluciones) en el articulo citado, solo en el motor interno."
+      ],
+      "applicability_to_vivamarket": "Alta - el flujo de checkout de VivaMarket usa un boton generico 'Continuar' que encaja directamente con la hipotesis probada.",
+      "confidence_score": 0.78,
+      "recommendation_strength": "alta",
+      "lever_id": "checkout_cta_copy",
+      "score": 0.91,
+      "status": "activa_ganadora",
+      "intervention_id": "INT-101",
+      "discarded_without_test": false,
+      "discard_reason": null,
+      "superseded_by": null,
+      "recommended_action": "Adopt the urgency-based checkout CTA as the new default for the checkout button.",
+      "primary_kpi": "checkout_completion_rate",
+      "recommended_kpi": "checkout_completion_rate",
+      "guardrail_kpi": "opt_out_rate",
+      "business_context": "The checkout team wants to reduce abandonment on the final payment step without increasing opt-outs or customer friction.",
+      "guardrails": [
+        "Keep opt-out rate stable",
+        "Avoid misleading urgency claims"
+      ],
+      "result_summary": "The urgency CTA improved checkout completion versus the current default.",
+      "synthetic_previous_action": {
+        "action_id": "INC-CHK-001",
+        "article_title": "Current checkout CTA: Continue",
+        "status_label": "Current action",
+        "summary": "The current checkout button uses neutral copy and serves as the baseline experience.",
+        "latest_stat_run_id": "baseline-checkout-continue"
+      }
+    },
+    {
+      "proposal_id": "p7-20260702-5e6f7089",
+      "source_name": "Baymard Institute",
+      "article_title": "Abandoned Cart Email Timing: 1-Hour Beats 24-Hour Delay (synthetic case study)",
+      "article_url": "https://baymard.com/blog/abandoned-cart-timing-synthetic-demo",
+      "published_at": "2026-06-05T00:00:00Z",
+      "summary_for_business": "Enviar el email de carrito abandonado tras 1 hora en vez de 24 horas mejoro la tasa de recuperacion en un panel sintetico.",
+      "citation_anchor": "In a synthetic panel of 980 abandoned sessions, sending the reminder email after 1 hour instead of 24 hours lifted recovery rate by 9.6%.",
+      "numeric_claims": [
+        "980",
+        "9.6%"
+      ],
+      "pros": [
+        "Cambio puramente de configuracion (timing de envio), sin coste de desarrollo adicional.",
+        "El efecto reportado es consistente con la intuicion de recencia en comportamiento de compra."
+      ],
+      "contras": [
+        "Enviar mas rapido puede percibirse como agresivo por una parte de los usuarios; riesgo de opt-out no cuantificado en el articulo de origen.",
+        "Solo se dispone de un panel sintetico, no de series temporales reales de VivaMarket."
+      ],
+      "applicability_to_vivamarket": "Alta - el flujo de email de carrito abandonado ya existe y el cambio es solo de timing.",
+      "confidence_score": 0.74,
+      "recommendation_strength": "alta",
+      "lever_id": "cart_abandon_email_timing",
+      "score": 0.88,
+      "status": "activa_ganadora",
+      "intervention_id": "INT-102",
+      "discarded_without_test": false,
+      "discard_reason": null,
+      "superseded_by": null,
+      "recommended_action": "Switch the abandoned-cart trigger from 24 hours to 1 hour after abandonment.",
+      "primary_kpi": "cart_recovery_rate",
+      "recommended_kpi": "cart_recovery_rate",
+      "guardrail_kpi": "opt_out_rate",
+      "business_context": "CRM wants to recover more carts while keeping unsubscribe risk within the normal weekly range.",
+      "guardrails": [
+        "Keep unsubscribe rate within threshold",
+        "Do not over-contact recent purchasers"
+      ],
+      "result_summary": "The 1-hour email timing recovered more carts than the current 24-hour sequence.",
+      "synthetic_previous_action": {
+        "action_id": "INC-CART-001",
+        "article_title": "Current cart email timing: 24-hour delay",
+        "status_label": "Current action",
+        "summary": "The current abandoned-cart program waits 24 hours before sending the first recovery email.",
+        "latest_stat_run_id": "baseline-cart-24h"
+      }
+    },
+    {
+      "proposal_id": "p7-20260703-8b2c9e11",
+      "source_name": "Nielsen Norman Group",
+      "article_title": "Checkout CTA Microcopy: Testing 'Buy Now' Against Baseline (synthetic follow-up)",
+      "article_url": "https://www.nngroup.com/articles/checkout-cta-buynow-synthetic-demo/",
+      "published_at": "2026-06-08T00:00:00Z",
+      "summary_for_business": "Variante de copy 'Buy now' con un lift menor que la variante ya implementada para la misma palanca.",
+      "citation_anchor": "A synthetic follow-up test on 610 sessions found that the label 'Buy now' increased completion by only 3.1%, a smaller lift than the previously implemented variant.",
+      "numeric_claims": [
+        "610",
+        "3.1%"
+      ],
+      "pros": [
+        "Lift positivo respecto al baseline original, aunque menor que la variante ya activa."
+      ],
+      "contras": [
+        "Ataca la misma palanca (lever_id) que una accion ya activa/ganadora con mejor resultado (14.3% vs 3.1%).",
+        "No aporta una hipotesis distinta, solo una redaccion alternativa de la misma idea ya validada y superada."
+      ],
+      "applicability_to_vivamarket": "Baja marginal - la palanca ya tiene una variante ganadora superior implementada.",
+      "confidence_score": 0.41,
+      "recommendation_strength": "baja",
+      "lever_id": "checkout_cta_copy",
+      "score": 0.55,
+      "status": "superseded",
+      "intervention_id": null,
+      "discarded_without_test": true,
+      "discard_reason": "lever_id 'checkout_cta_copy' ya tiene una accion activa/ganadora (p7-20260701-1a2b3c4d, INT-101) con mejor lift citado. Regla anti-obsolescencia de 1.5.1: descartada antes de entrar a test.",
+      "superseded_by": "p7-20260701-1a2b3c4d"
+    },
+    {
+      "proposal_id": "p7-20260704-3d7f0a55",
+      "source_name": "Nielsen Norman Group",
+      "article_title": "Checkout CTA Microcopy: Countdown Timer Variant (synthetic proposal)",
+      "article_url": "https://www.nngroup.com/articles/checkout-cta-countdown-synthetic-demo/",
+      "published_at": "2026-06-10T00:00:00Z",
+      "summary_for_business": "Propuesta de anadir un contador de 15 segundos junto al boton de checkout; proyeccion interna de lift menor que la variante ya activa.",
+      "citation_anchor": "A synthetic internal draft proposed testing a 15-second countdown timer next to the checkout button, projecting a hypothetical 5.4% lift based on 340 simulated sessions.",
+      "numeric_claims": [
+        "15",
+        "5.4%",
+        "340"
+      ],
+      "pros": [
+        "Mecanismo de urgencia visual, complementario al copy, con cierto respaldo en literatura de UX."
+      ],
+      "contras": [
+        "Misma palanca que una accion ya activa/ganadora; el lift proyectado (5.4%) es inferior al ya conseguido (14.3%).",
+        "El contador puede generar percepcion de presion agresiva en el usuario, riesgo no cuantificado."
+      ],
+      "applicability_to_vivamarket": "Baja marginal - misma palanca ya cubierta por una variante superior.",
+      "confidence_score": 0.38,
+      "recommendation_strength": "baja",
+      "lever_id": "checkout_cta_copy",
+      "score": 0.49,
+      "status": "superseded",
+      "intervention_id": null,
+      "discarded_without_test": true,
+      "discard_reason": "lever_id 'checkout_cta_copy' ya tiene una accion activa/ganadora (p7-20260701-1a2b3c4d, INT-101). Regla anti-obsolescencia de 1.5.1: descartada antes de entrar a test.",
+      "superseded_by": "p7-20260701-1a2b3c4d"
+    },
+    {
+      "proposal_id": "p7-20260705-6a1e2c88",
+      "source_name": "Baymard Institute",
+      "article_title": "Abandoned Cart Email Timing: Same-Day 6-Hour Delay Variant (synthetic proposal)",
+      "article_url": "https://baymard.com/blog/abandoned-cart-6h-synthetic-demo",
+      "published_at": "2026-06-12T00:00:00Z",
+      "summary_for_business": "Variante de timing de 6 horas para el email de carrito abandonado, con proyeccion de lift menor que la variante de 1 hora ya activa.",
+      "citation_anchor": "A synthetic candidate test compared a 6-hour delay against the current 1-hour benchmark, with an internal projection of a 2.2% lift over 415 simulated carts.",
+      "numeric_claims": [
+        "6",
+        "2.2%",
+        "415"
+      ],
+      "pros": [
+        "Delay mas largo podria reducir la percepcion de intrusismo en un segmento de usuarios sensibles."
+      ],
+      "contras": [
+        "Misma palanca (timing del email de carrito abandonado) que una accion ya activa/ganadora con mejor lift citado (9.6% vs 2.2%).",
+        "No hay evidencia de que el segmento sensible a la agresividad del envio sea material para VivaMarket."
+      ],
+      "applicability_to_vivamarket": "Baja marginal - la palanca ya tiene una variante ganadora superior implementada.",
+      "confidence_score": 0.36,
+      "recommendation_strength": "baja",
+      "lever_id": "cart_abandon_email_timing",
+      "score": 0.47,
+      "status": "superseded",
+      "intervention_id": null,
+      "discarded_without_test": true,
+      "discard_reason": "lever_id 'cart_abandon_email_timing' ya tiene una accion activa/ganadora (p7-20260702-5e6f7089, INT-102). Regla anti-obsolescencia de 1.5.1: descartada antes de entrar a test.",
+      "superseded_by": "p7-20260702-5e6f7089"
+    },
+    {
+      "proposal_id": "p7-20260706-2f4b8d33",
+      "source_name": "Baymard Institute",
+      "article_title": "Exit-Intent Discount Popups: Balancing Recovery and Margin (synthetic case study)",
+      "article_url": "https://baymard.com/blog/exit-intent-popup-synthetic-demo",
+      "published_at": "2026-06-15T00:00:00Z",
+      "summary_for_business": "Popup de descuento del 10% al detectar intencion de salida; podria recuperar visitantes a punto de abandonar el sitio.",
+      "citation_anchor": "A synthetic pilot on 500 sessions suggests an exit-intent 10% discount popup could recover 7.8% of abandoning visitors before they leave the site.",
+      "numeric_claims": [
+        "500",
+        "10%",
+        "7.8%"
+      ],
+      "pros": [
+        "Palanca distinta (exit_intent_discount_popup) a las ya activas; no choca con la regla anti-obsolescencia.",
+        "Efecto de recuperacion citado es significativo en relacion al volumen de abandono."
+      ],
+      "contras": [
+        "El descuento del 10% tiene coste directo de margen que el articulo no cuantifica.",
+        "Riesgo de canibalizacion: usuarios podrian aprender a activar el popup a proposito para obtener el descuento."
+      ],
+      "applicability_to_vivamarket": "Media - requiere validar impacto en margen antes de escalar, mas alla del lift de conversion.",
+      "confidence_score": 0.63,
+      "recommendation_strength": "media",
+      "lever_id": "exit_intent_discount_popup",
+      "score": 0.82,
+      "status": "pending_test",
+      "intervention_id": null,
+      "discarded_without_test": false,
+      "discard_reason": null,
+      "superseded_by": null,
+      "recommended_action": "Approve a controlled test of the exit-intent popup on high-abandonment sessions only.",
+      "primary_kpi": "cart_recovery_rate",
+      "recommended_kpi": "cart_recovery_rate",
+      "guardrail_kpi": "opt_out_rate",
+      "business_context": "Merchandising wants to recover abandoning visitors without eroding margin across the full site.",
+      "guardrails": [
+        "Protect margin",
+        "Limit frequency per visitor"
+      ]
+    },
+    {
+      "proposal_id": "p7-20260707-4c9d1f67",
+      "source_name": "Nielsen Norman Group",
+      "article_title": "Low-Stock Urgency Badges on Product Pages (synthetic mock trial)",
+      "article_url": "https://www.nngroup.com/articles/urgency-badge-synthetic-demo/",
+      "published_at": "2026-06-18T00:00:00Z",
+      "summary_for_business": "Badge de 'Solo quedan 3 unidades' en pagina de producto para aumentar la tasa de anadir al carrito.",
+      "citation_anchor": "In a synthetic mock trial of 275 product views, adding a 'Only 3 left in stock' badge increased add-to-cart rate by 4.9%.",
+      "numeric_claims": [
+        "275",
+        "3",
+        "4.9%"
+      ],
+      "pros": [
+        "Palanca distinta y de bajo coste de implementacion (etiqueta de stock)."
+      ],
+      "contras": [
+        "Requiere que el dato de stock mostrado sea veraz; un badge de urgencia falso es un riesgo reputacional/legal.",
+        "Muestra citada (275 vistas) es pequena en comparacion con otras propuestas."
+      ],
+      "applicability_to_vivamarket": "Media - depende de la fiabilidad del inventario en tiempo real del catalogo de VivaMarket.",
+      "confidence_score": 0.52,
+      "recommendation_strength": "media",
+      "lever_id": "product_page_urgency_badge",
+      "score": 0.61,
+      "status": "pending_test",
+      "intervention_id": null,
+      "discarded_without_test": false,
+      "discard_reason": null,
+      "superseded_by": null,
+      "recommended_action": "Test urgency badges only on low-stock products with stable fulfillment confidence.",
+      "primary_kpi": "checkout_completion_rate",
+      "recommended_kpi": "checkout_completion_rate",
+      "guardrail_kpi": "opt_out_rate",
+      "business_context": "Product pages need a clearer urgency cue, but operations must avoid false scarcity signals.",
+      "guardrails": [
+        "Only show on confirmed low-stock SKUs",
+        "Do not increase customer complaints"
+      ]
+    },
+    {
+      "proposal_id": "p7-20260708-9c1d44af",
+      "source_name": "Baymard Institute",
+      "article_title": "Free Shipping Threshold Banner Placement (synthetic in-progress test)",
+      "article_url": "https://baymard.com/blog/free-shipping-banner-synthetic-demo",
+      "published_at": "2026-06-20T00:00:00Z",
+      "summary_for_business": "Banner de umbral de envio gratis mostrado sobre el resumen del carrito; test en curso con senal preliminar positiva pero aun sin potencia suficiente.",
+      "citation_anchor": "A synthetic in-progress test on 640 sessions so far shows a provisional 6.0% lift in average order value when the free-shipping threshold banner is shown above the cart summary.",
+      "numeric_claims": [
+        "640",
+        "6.0%"
+      ],
+      "pros": [
+        "Senal preliminar positiva en valor medio de pedido (AOV).",
+        "Bajo coste de implementacion visual."
+      ],
+      "contras": [
+        "Test todavia infra-potenciado (power_achieved por debajo del umbral); el veredicto no es concluyente todavia.",
+        "Escalado a revision de Negocio por el Power Guardrail, siguiendo el patron ya vigente en el proyecto (no se lanza sin mas datos)."
+      ],
+      "applicability_to_vivamarket": "Pendiente de confirmar - a la espera de mas datos antes de decidir.",
+      "confidence_score": 0.55,
+      "recommendation_strength": "pendiente_revision",
+      "lever_id": "free_shipping_threshold_banner",
+      "score": 0.7,
+      "status": "testing_escalated_insufficient_sample",
+      "intervention_id": "INT-103",
+      "discarded_without_test": false,
+      "discard_reason": null,
+      "superseded_by": null,
+      "recommended_action": "Keep the test running until the banner reaches sufficient sample size before any business decision.",
+      "primary_kpi": "average_order_value_lift",
+      "recommended_kpi": "average_order_value_lift",
+      "guardrail_kpi": "opt_out_rate",
+      "business_context": "The basket team is testing whether a better free-shipping reminder can raise average order value without harming conversion.",
+      "guardrails": [
+        "Do not reduce checkout completion",
+        "Keep opt-out rate within threshold"
+      ],
+      "result_summary": "The banner shows an early positive signal, but there is not enough evidence yet to decide."
+    },
+    {
+      "proposal_id": "p7-20260709-0e5a6b12",
+      "source_name": "Nielsen Norman Group",
+      "article_title": "Checkout Progress Indicator: Step Count Transparency (synthetic desk review)",
+      "article_url": "https://www.nngroup.com/articles/checkout-progress-synthetic-demo/",
+      "published_at": "2026-06-22T00:00:00Z",
+      "summary_for_business": "Mostrar '2 de 3 pasos completados' en el checkout para reducir el abandono por incertidumbre sobre la duracion del proceso.",
+      "citation_anchor": "An early synthetic desk review (no live test yet) references an internal hypothesis that showing '2 of 3 steps completed' could reduce checkout abandonment by an estimated 8% based on informal observation of 90 sessions.",
+      "numeric_claims": [
+        "2",
+        "3",
+        "8%",
+        "90"
+      ],
+      "pros": [
+        "Palanca nueva, no cubierta por ninguna accion activa.",
+        "Reduce incertidumbre del proceso, un driver de abandono bien documentado en UX de checkout."
+      ],
+      "contras": [
+        "Base de evidencia es una observacion informal (90 sesiones, sin test formal todavia); confianza baja.",
+        "Requiere trabajo de desarrollo (UI de progreso), mayor coste que los cambios de copy."
+      ],
+      "applicability_to_vivamarket": "Por determinar - draft recien generado, todavia no ha entrado en la cola priorizada de 1.5.1.",
+      "confidence_score": 0.44,
+      "recommendation_strength": "baja",
+      "lever_id": "checkout_progress_indicator",
+      "score": null,
+      "status": "draft_ready",
+      "intervention_id": null,
+      "discarded_without_test": false,
+      "discard_reason": null,
+      "superseded_by": null,
+      "recommended_action": "Approve a lightweight design review and then test the progress indicator in checkout.",
+      "primary_kpi": "checkout_completion_rate",
+      "recommended_kpi": "checkout_completion_rate",
+      "guardrail_kpi": "opt_out_rate",
+      "business_context": "Checkout wants to reduce uncertainty about remaining steps without adding visual noise.",
+      "guardrails": [
+        "Do not slow load time",
+        "Avoid overwhelming mobile users"
+      ]
+    }
+  ]
+}

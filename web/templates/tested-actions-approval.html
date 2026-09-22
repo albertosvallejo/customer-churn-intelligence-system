@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VivaMarket · Tested Actions Approval</title>
+  <link rel="icon" type="image/x-icon" href="/static/assets/favicon.ico?v=4e21fe86" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/assets/favicon-16x16.png?v=c0870bcc" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/favicon-32x32.png?v=560cdfe2" />
+  <link rel="apple-touch-icon" href="/static/assets/apple-touch-icon.png?v=107c8023" />
+  <link rel="stylesheet" href="/static/css/dashboard-app.css?v=c891f75a" />
+</head>
+<body data-view="tested-actions">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="logo-card"><img src="/static/assets/logo.gif" alt="VivaMarket" /></div>
+        <div class="product-meta"><strong>Customer Churn Intelligence</strong><span>VivaMarket Brasil</span></div>
+        <nav aria-label="Main navigation">
+          <p class="sidebar-label">NAVIGATION</p>
+          <a class="nav-item" href="/customer-churn/dashboard"><span class="nav-dot" aria-hidden="true"><i></i></span><span class="nav-label-full">Dashboard</span><span class="nav-label-mobile">Dashboard</span></a>
+          <a class="nav-item active" href="/customer-churn/tested-actions-approval"><span class="nav-dot" aria-hidden="true"><i></i></span><span class="nav-label-full">Tested Actions Approval</span><span class="nav-label-mobile">Tested</span></a>
+          <a class="nav-item" href="/customer-churn/new-actions-testing"><span class="nav-dot" aria-hidden="true"><i></i></span><span class="nav-label-full">New Actions Approval</span><span class="nav-label-mobile">New Actions</span></a>
+        </nav>
+      </div>
+      <div class="feedback-panel">
+        <p class="sidebar-label">FEEDBACK</p>
+        <div class="stars" aria-label="Rate this dashboard">
+          <button type="button" class="selected">★</button><button type="button" class="selected">★</button><button type="button" class="selected">★</button><button type="button" class="selected">★</button><button type="button" class="selected">★</button>
+        </div>
+        <textarea placeholder="Optional comments…" aria-label="Optional feedback comments"></textarea>
+        <button class="feedback-button" type="button">Send feedback</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div id="synthetic-banner" class="synthetic-banner is-hidden">SYNTHETIC DATA — NOT REAL RESULTS</div>
+      <div class="content-wrap">
+        <header class="approval-header">
+          <div>
+            <p class="eyebrow">GOVERNANCE · POST-TEST DECISIONS</p>
+            <h1>TESTED ACTIONS APPROVAL</h1>
+            <p class="intro">Review proposals that outperformed an existing action and decide whether they should become the new active treatment.</p>
+            <p id="run-meta" class="run-meta">Loading queue metadata…</p>
+          </div>
+          <div class="queue-count"><span id="queue-count">—</span><p>Awaiting<br/>decisions</p></div>
+        </header>
+
+        <section id="auth-gate" class="panel auth-panel">
+          <div class="section-heading"><div><p class="section-kicker">ACCESS</p><h2>Operator token required</h2><p>Enter the current Phase 7 review token to load the protected queue.</p></div></div>
+          <div class="auth-form"><input id="phase7-token-input" type="password" placeholder="Phase 7 token" /><button id="phase7-token-submit" class="cta-button primary" type="button">Unlock</button></div>
+          <p id="auth-error" class="form-hint is-hidden">Phase 7 review token is required.</p>
+        </section>
+
+        <section id="view-loading" class="state-panel is-hidden">Loading tested actions queue…</section>
+        <section id="view-error" class="state-panel is-hidden" role="alert"><strong>Could not load tested actions queue.</strong><p id="view-error-message">Unexpected error.</p><button id="view-retry" class="quiet-button" type="button">Retry</button></section>
+
+        <section class="notice is-hidden" id="tested-notice"><span>✓</span><div><strong>Review each tested action before replacing the current incumbent</strong><p>Accept or reject every winning proposal and keep the audit trail consistent.</p></div></section>
+
+        <section class="panel is-hidden" id="tested-panel">
+          <div class="section-heading"><div><p class="section-kicker">DECISION QUEUE</p><h2>Winning proposals</h2><p>Accept or reject each tested action. Rejections are recorded in the audit trail.</p></div><span class="pill warning" id="tested-pending-pill">0 pending</span></div>
+          <div class="table-scroll">
+            <table class="campaign-table">
+              <thead><tr><th>Proposal</th><th>KPI to Improve</th><th>Result</th><th>Test Result</th><th>Guardrail</th><th>Test period</th><th>Status</th><th>Decision</th></tr></thead>
+              <tbody id="tested-rows"></tbody>
+            </table>
+          </div>
+          <div id="tested-empty" class="empty-state is-hidden">No tested actions are pending approval.</div>
+        </section>
+
+        <section class="panel history-panel is-hidden" id="history-panel">
+          <div class="section-heading"><div><p class="section-kicker">AUDIT TRAIL</p><h2>History of all actions</h2><p>Complete test, risk and decision context for every action launched.</p></div><button id="history-export" class="quiet-button" type="button">Export history</button></div>
+          <div class="table-scroll">
+            <table class="history-table">
+              <thead><tr><th>Action</th><th>KPI to Improve</th><th>Result</th><th>Test Result</th><th>Guardrail</th><th>Test Period</th><th>Decision Reason</th><th>Status</th></tr></thead>
+              <tbody id="history-rows"></tbody>
+            </table>
+          </div>
+          <div id="history-empty" class="empty-state is-hidden">No visible Phase 7 history events yet.</div>
+          <div id="history-pagination" class="pagination-bar is-hidden"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="decision-drawer" class="decision-drawer is-hidden" aria-hidden="true"></div>
+  <div id="toast" class="toast" aria-live="polite"><span>✓</span><div class="toast-message">State refreshed.</div><small>State refreshed</small></div>
+  <script type="module" src="/static/js/tested-actions.js?v=20260820r3"></script>
+</body>
+</html>

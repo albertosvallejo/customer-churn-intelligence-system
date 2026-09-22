@@ -1,0 +1,7 @@
+seed: 42
+timezone: Europe/Paris
+n8n_thresholds:
+  high: 0.75
+  medium: 0.45
+dataset_manifest_path: data/DATASET_MANIFEST.json
+source_dataset_path: data/raw/churn_sqlite_db.sqlite

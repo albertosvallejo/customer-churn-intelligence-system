@@ -1,0 +1,77 @@
+{
+  "manifest_version": "phase7_synthetic_demo_v1",
+  "bundle_version": "rebuild-20260727",
+  "mode": "synthetic_demo",
+  "run_date": "20260727",
+  "logical_date": "2026-07-27",
+  "seed_version": "synthetic_demo_seed_20260727",
+  "generator_script": "scripts/build_phase7_synthetic_demo_bundle.py",
+  "validation_script": "scripts/validate_phase7_synthetic_demo_manifest.py",
+  "schema": {
+    "phase7_source_snapshot": "json",
+    "phase7_action_drafts": "json",
+    "phase6_kpi_status": "json",
+    "phase7_integrated_actions": "json",
+    "phase7_kpi_status": "json",
+    "phase7_n8n_payload": "json",
+    "phase7_stat_test_runs": "parquet",
+    "phase7_action_history_log": "parquet",
+    "phase7_stat_launch_requests": "parquet"
+  },
+  "artifacts": {
+    "phase7_source_snapshot": {
+      "name": "synthetic_demo__phase7_source_snapshot_20260727.json",
+      "path": "data/synthetic_demo/synthetic_demo__phase7_source_snapshot_20260727.json",
+      "sha256": "c84e07fb31f21222ecbc9ce6047b502f3ea0f7139237f754ee8f1b7b8ddb24e3",
+      "size_bytes": 6860
+    },
+    "phase7_action_drafts": {
+      "name": "synthetic_demo__phase7_action_drafts_20260727.json",
+      "path": "data/synthetic_demo/synthetic_demo__phase7_action_drafts_20260727.json",
+      "sha256": "f3f52ee7fe85ea3e9085b1d86653ae445645be56dce14d28479c4c6de4ced125",
+      "size_bytes": 19837
+    },
+    "phase6_kpi_status": {
+      "name": "synthetic_demo__phase6_kpi_status_20260727.json",
+      "path": "data/synthetic_demo/synthetic_demo__phase6_kpi_status_20260727.json",
+      "sha256": "3ff0e2e9dd0df3c6e4e99de55ec804488bd7a1235b4ae22c171bd84fd6fbdef1",
+      "size_bytes": 2150
+    },
+    "phase7_integrated_actions": {
+      "name": "synthetic_demo__phase7_integrated_actions_20260727.json",
+      "path": "data/synthetic_demo/synthetic_demo__phase7_integrated_actions_20260727.json",
+      "sha256": "ecf3944f8fd6749428bbf916a97019aa562490a18e644214911ca47981861392",
+      "size_bytes": 19774
+    },
+    "phase7_kpi_status": {
+      "name": "synthetic_demo__phase7_kpi_status_20260727.json",
+      "path": "data/synthetic_demo/synthetic_demo__phase7_kpi_status_20260727.json",
+      "sha256": "b9321c2d5da59d9e74fb564d2e07aab7ab4725b20a8b68fe6e36dc6247820b15",
+      "size_bytes": 2361
+    },
+    "phase7_n8n_payload": {
+      "name": "synthetic_demo__phase7_n8n_payload_20260727.json",
+      "path": "data/synthetic_demo/synthetic_demo__phase7_n8n_payload_20260727.json",
+      "sha256": "9b7f7bc5cbf5344988a65bd65fb61bc9b11b44bfd001bb929dd96b660edbf5f2",
+      "size_bytes": 6056
+    },
+    "phase7_stat_test_runs": {
+      "name": "synthetic_demo__phase7_stat_test_runs.parquet",
+      "path": "data/synthetic_demo/synthetic_demo__phase7_stat_test_runs.parquet",
+      "sha256": "b4463a385f63f94d8b630361cce577ea18f1a4ed3500a98f9ccc3e52799a8f16",
+      "size_bytes": 12797
+    },
+    "phase7_action_history_log": {
+      "name": "synthetic_demo__phase7_action_history_log.parquet",
+      "path": "data/synthetic_demo/synthetic_demo__phase7_action_history_log.parquet",
+      "sha256": "06b0c5e58855f17a77560af76e05d148b7ab9e665e3ee664536e90d725d59a37",
+      "size_bytes": 10047
+    },
+    "phase7_stat_launch_requests": {
+      "name": "synthetic_demo__phase7_stat_launch_requests.parquet",
+      "path": "data/synthetic_demo/synthetic_demo__phase7_stat_launch_requests.parquet",
+      "sha256": "4db5df1a65934efbb79a5c38daf4515db6d4cedc36c479b7866ca37fa2a0d0f3",
+      "size_bytes": 8805
+    }
+  }
+}

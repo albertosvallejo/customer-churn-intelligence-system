@@ -17,7 +17,7 @@ from pipeline.phase4_population_redesign_benchmark import (
 class TestPhase4PopulationRedesignBenchmark(unittest.TestCase):
     def test_payload_contains_segments_and_decision(self):
         payload = build_population_benchmark_payload()
-        self.assertEqual(payload["measurement_label"], "Simulated campaign baseline")
+        self.assertEqual(payload["measurement_label"], "Portfolio decision benchmark")
         self.assertIn(payload["decision"], {"defer_v4_keep_v2c", "support_population_redesign_candidate"})
         self.assertGreaterEqual(payload["overall_baseline"]["customers"], 3000)
         self.assertTrue(payload["segment_summary"])

@@ -7,10 +7,8 @@ import uuid
 from datetime import datetime, timezone
 from functools import lru_cache
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qs, urlparse
 
 import joblib
 import pandas as pd
@@ -27,10 +25,44 @@ from evidence.phase6_integration import (
     load_latest_n8n_action_payload,
     record_action_decision,
 )
+from evidence.phase7_integration import (
+    build_integrated_actions,
+    build_phase7_kpi_status_view,
+    build_phase7_n8n_payload,
+    build_phase7_post_test_decision_queue,
+    build_phase7_stat_summary,
+    create_phase7_stat_launch_request,
+    execute_phase7_stat_launch_request,
+    load_integrated_actions,
+    load_phase7_action_history,
+    load_phase7_launch_requests,
+    load_latest_phase7_kpi_status,
+    load_latest_phase7_n8n_payload,
+    load_phase7_stat_test_runs,
+    record_phase7_action_decision,
+    record_phase7_post_test_decision,
+)
 
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path(os.getenv("PROJECT_ROOT", Path(__file__).resolve().parents[2]))
+def _resolve_project_root() -> Path:
+    env_value = str(os.getenv("PROJECT_ROOT") or "").strip()
+    candidates: list[Path] = []
+    if env_value:
+        candidates.append(Path(env_value).expanduser())
+    candidates.append(Path(__file__).resolve().parents[2])
+
+    for candidate in candidates:
+        resolved = candidate.resolve(strict=False)
+        processed_dir = resolved / "data" / "processed"
+        src_dir = resolved / "src"
+        if processed_dir.exists() and src_dir.exists():
+            return resolved
+
+    return candidates[-1].resolve(strict=False)
+
+
+PROJECT_ROOT = _resolve_project_root()
 DATA_PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
 MODELS_DIR = PROJECT_ROOT / "models"
 COUPON_REGISTRY_PATH = DATA_PROCESSED_DIR / "generated_coupons.jsonl"
@@ -43,6 +75,11 @@ DEFAULT_DB_URL = os.getenv("CHURN_DB_URL", f"sqlite:///{PROJECT_ROOT / 'data' / 
 PINNED_SCORING_BUNDLE = os.getenv("CHURN_SCORING_BUNDLE")
 GOVERNANCE_MONITOR_PATH = DATA_PROCESSED_DIR / "phase4_governance_monitor_latest.json"
 SYNTHETIC_ACTIONS_PATH = DATA_PROCESSED_DIR / "retention_actions_synthetic_30d.parquet"
+SYNTHETIC_DEMO_MANIFEST_PATH = PROJECT_ROOT / "data" / "synthetic_demo" / "synthetic_demo__phase7_manifest_20260727.json"
+
+
+def _is_synthetic_demo_mode() -> bool:
+    return str(os.getenv("MODE") or "").strip().lower() == "synthetic_demo"
 
 
 def _utc_now_iso() -> str:
@@ -54,34 +91,19 @@ def _json_default(value: Any) -> Any:
         if getattr(value, "tzinfo", None) is None:
             return value.isoformat()
         return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
-    if pd.isna(value):
-        return None
+    if isinstance(value, tuple):
+        return list(value)
+    if hasattr(value, "tolist") and not isinstance(value, (str, bytes, bytearray)):
+        converted = value.tolist()
+        return converted
+    try:
+        if pd.isna(value):
+            return None
+    except Exception:
+        pass
     if hasattr(value, "item"):
         return value.item()
     return value
-
-
-def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: Any) -> None:
-    body = json.dumps(payload, default=_json_default).encode("utf-8")
-    handler.send_response(status)
-    handler.send_header("Content-Type", "application/json; charset=utf-8")
-    handler.send_header("Content-Length", str(len(body)))
-    handler.end_headers()
-    handler.wfile.write(body)
-
-
-def _read_json_body(handler: BaseHTTPRequestHandler) -> dict:
-    content_length = int(handler.headers.get("Content-Length", "0"))
-    if content_length <= 0:
-        raise ValueError("Request body is required")
-    raw_body = handler.rfile.read(content_length)
-    try:
-        payload = json.loads(raw_body.decode("utf-8"))
-    except json.JSONDecodeError as exc:
-        raise ValueError("Request body must be valid JSON") from exc
-    if not isinstance(payload, dict):
-        raise ValueError("Request body must be a JSON object")
-    return payload
 
 
 def _latest_explainability_path() -> Path:
@@ -406,6 +428,18 @@ def _resolve_scoring_bundle_path() -> Path | None:
 def _latest_scoring_metadata() -> dict:
     bundle_path = _resolve_scoring_bundle_path()
     if bundle_path is None:
+        if _is_synthetic_demo_mode() and SYNTHETIC_DEMO_MANIFEST_PATH.exists():
+            with SYNTHETIC_DEMO_MANIFEST_PATH.open("r", encoding="utf-8") as handle:
+                manifest = json.load(handle)
+            run_date_tag = str(manifest.get("run_date") or "20260727")
+            return {
+                "run_id": f"synthetic_demo_{run_date_tag}",
+                "run_date_tag": run_date_tag,
+                "model_version": str(manifest.get("bundle_version") or "synthetic_demo"),
+                "pipeline_tag": str(manifest.get("manifest_version") or "synthetic_demo"),
+                "source_file": SYNTHETIC_DEMO_MANIFEST_PATH.name,
+                "risk_thresholds": None,
+            }
         explainability_path = _latest_explainability_path()
         fallback_tag = explainability_path.stem.split("_")[-1]
         return {
@@ -985,340 +1019,3 @@ def _generate_coupon(payload: dict) -> dict:
     return coupon_payload
 
 
-class ChurnServiceHandler(BaseHTTPRequestHandler):
-    server_version = "ChurnService/1.0"
-
-    def do_GET(self) -> None:
-        parsed = urlparse(self.path)
-        if parsed.path == "/health":
-            scoring_metadata = _latest_scoring_metadata()
-            _json_response(
-                self,
-                HTTPStatus.OK,
-                {
-                    "status": "ok",
-                    "service": "daily-customer-churn-api",
-                    "timestamp": _utc_now_iso(),
-                    "run_id": scoring_metadata["run_id"],
-                    "run_date_tag": scoring_metadata["run_date_tag"],
-                    "model_version": scoring_metadata["model_version"],
-                    "pipeline_tag": scoring_metadata["pipeline_tag"],
-                    "source_file": scoring_metadata["source_file"],
-                    "risk_thresholds": scoring_metadata["risk_thresholds"],
-                },
-            )
-            return
-
-        if parsed.path == "/thresholds/latest":
-            scoring_metadata = _latest_scoring_metadata()
-            _json_response(
-                self,
-                HTTPStatus.OK,
-                {
-                    "status": "ok",
-                    "run_id": scoring_metadata["run_id"],
-                    "run_date_tag": scoring_metadata["run_date_tag"],
-                    "model_version": scoring_metadata["model_version"],
-                    "pipeline_tag": scoring_metadata["pipeline_tag"],
-                    "source_file": scoring_metadata["source_file"],
-                    "risk_thresholds": scoring_metadata["risk_thresholds"],
-                    "timestamp": _utc_now_iso(),
-                },
-            )
-            return
-
-        if parsed.path == "/explainability/latest":
-            params = parse_qs(parsed.query)
-            customer_id = params.get("customer_id", [None])[0]
-            risk_level = params.get("risk_level", [None])[0]
-            limit_value = params.get("limit", [None])[0]
-            limit = None
-            if limit_value is not None:
-                try:
-                    limit = max(1, int(limit_value))
-                except ValueError:
-                    _json_response(self, HTTPStatus.BAD_REQUEST, {"error": "limit must be an integer"})
-                    return
-            try:
-                payload = _load_latest_explainability(customer_id=customer_id, risk_level=risk_level, limit=limit)
-            except FileNotFoundError as exc:
-                _json_response(self, HTTPStatus.NOT_FOUND, {"error": str(exc)})
-                return
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected explainability error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.OK, payload)
-            return
-
-        if parsed.path == "/health/events":
-            try:
-                _ensure_retention_events_table()
-                with _ops_engine().connect() as conn:
-                    event_count = conn.execute(text("SELECT COUNT(*) FROM retention_events")).scalar_one()
-                _json_response(
-                    self,
-                    HTTPStatus.OK,
-                    {
-                        "status": "ok",
-                        "service": "daily-customer-churn-api-events",
-                        "event_table": "retention_events",
-                        "event_count": int(event_count),
-                        "timestamp": _utc_now_iso(),
-                    },
-                )
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected event health error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-            return
-
-        if parsed.path == "/agent/status":
-            try:
-                payload = _load_agent_status()
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected agent status error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.OK, payload)
-            return
-
-        if parsed.path == "/agent/status/daily":
-            params = parse_qs(parsed.query)
-            refresh = params.get("refresh", ["false"])[0].lower() in {"1", "true", "yes"}
-            try:
-                payload = _load_phase5_daily_status(refresh=refresh)
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected phase5 daily status error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.OK, payload)
-            return
-
-        if parsed.path == "/agent/status/shadow-monitor":
-            params = parse_qs(parsed.query)
-            refresh = params.get("refresh", ["false"])[0].lower() in {"1", "true", "yes"}
-            try:
-                payload = _load_phase5_shadow_monitor_status(refresh=refresh)
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected phase5 shadow monitor error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.OK, payload)
-            return
-
-        if parsed.path == "/agent/status/phase5":
-            params = parse_qs(parsed.query)
-            refresh = params.get("refresh", ["false"])[0].lower() in {"1", "true", "yes"}
-            try:
-                payload = _load_phase5_operational_snapshot(refresh=refresh)
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected phase5 operational snapshot error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.OK, payload)
-            return
-
-        if parsed.path == "/phase6/proposals/latest":
-            params = parse_qs(parsed.query)
-            run_date = params.get("run_date", [None])[0]
-            refresh_value = params.get("refresh", ["false"])[0].lower()
-            refresh = refresh_value in {"1", "true", "yes"}
-            try:
-                if refresh:
-                    payload = build_action_proposals(project_root=PROJECT_ROOT, run_date=run_date)
-                    proposals = load_action_proposals(PROJECT_ROOT, payload["run_date"])
-                    response_payload = {**payload, "proposals": proposals, "refreshed": True}
-                else:
-                    proposals = load_action_proposals(PROJECT_ROOT, run_date)
-                    effective_run_date = run_date or proposals[0]["proposal_run_date"] if proposals else run_date
-                    response_payload = {
-                        "run_date": effective_run_date,
-                        "proposal_count": len(proposals),
-                        "proposals": proposals,
-                        "refreshed": False,
-                    }
-            except FileNotFoundError as exc:
-                _json_response(self, HTTPStatus.NOT_FOUND, {"error": str(exc)})
-                return
-            except ValueError as exc:
-                _json_response(self, HTTPStatus.BAD_REQUEST, {"error": str(exc)})
-                return
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected Phase 6 proposal error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.OK, response_payload)
-            return
-
-        if parsed.path == "/phase6/action-history/latest":
-            try:
-                history = load_action_history(PROJECT_ROOT)
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected Phase 6 action-history error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(
-                self,
-                HTTPStatus.OK,
-                {"status": "ok", "record_count": len(history), "records": history, "timestamp": _utc_now_iso()},
-            )
-            return
-
-        if parsed.path == "/phase6/kpis/latest":
-            params = parse_qs(parsed.query)
-            refresh = params.get("refresh", ["false"])[0].lower() in {"1", "true", "yes"}
-            try:
-                payload = build_kpi_status_view(PROJECT_ROOT) if refresh else load_latest_kpi_status(PROJECT_ROOT)
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected Phase 6 KPI status error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.OK, payload)
-            return
-
-        if parsed.path == "/phase6/n8n-payload/latest":
-            params = parse_qs(parsed.query)
-            run_date = params.get("run_date", [None])[0]
-            refresh = params.get("refresh", ["false"])[0].lower() in {"1", "true", "yes"}
-            try:
-                payload = build_n8n_action_payload(PROJECT_ROOT, run_date=run_date) if refresh else load_latest_n8n_action_payload(PROJECT_ROOT)
-            except FileNotFoundError as exc:
-                _json_response(self, HTTPStatus.NOT_FOUND, {"error": str(exc)})
-                return
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected Phase 6 n8n payload error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.OK, payload)
-            return
-
-        _json_response(self, HTTPStatus.NOT_FOUND, {"error": "Not found"})
-
-    def do_POST(self) -> None:
-        parsed = urlparse(self.path)
-        if parsed.path == "/events/onesignal":
-            try:
-                payload = _read_json_body(self)
-                response_payload = _ingest_onesignal_events(payload)
-            except ValueError as exc:
-                _json_response(self, HTTPStatus.BAD_REQUEST, {"error": str(exc)})
-                return
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected OneSignal ingestion error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-
-            _json_response(self, HTTPStatus.CREATED, response_payload)
-            return
-
-        if parsed.path == "/phase6/proposals/decision":
-            try:
-                payload = _read_json_body(self)
-                response_payload = record_action_decision(payload, project_root=PROJECT_ROOT)
-            except ValueError as exc:
-                _json_response(self, HTTPStatus.BAD_REQUEST, {"error": str(exc)})
-                return
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected Phase 6 proposal decision error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.CREATED, response_payload)
-            return
-
-        if parsed.path == "/phase6/ab-tests/launch":
-            try:
-                payload = _read_json_body(self)
-                if "scenario_key" in payload:
-                    raise ValueError("scenario_key is not accepted by the public API")
-                response_payload = launch_ab_test(payload, project_root=PROJECT_ROOT)
-            except ValueError as exc:
-                _json_response(self, HTTPStatus.BAD_REQUEST, {"error": str(exc)})
-                return
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected Phase 6 A/B launch error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.CREATED, response_payload)
-            return
-
-        if parsed.path == "/agent/decisions/shadow":
-            try:
-                payload = _read_json_body(self)
-                response_payload = _create_shadow_decision(payload, refresh_artifacts=True, refresh_trigger="shadow_create")
-            except ValueError as exc:
-                _json_response(self, HTTPStatus.BAD_REQUEST, {"error": str(exc)})
-                return
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected shadow decision create error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.CREATED, response_payload)
-            return
-
-        if parsed.path == "/agent/decisions/shadow/run":
-            try:
-                payload = _read_json_body(self)
-                response_payload = _run_shadow_decision_cycle(payload)
-            except ValueError as exc:
-                _json_response(self, HTTPStatus.BAD_REQUEST, {"error": str(exc)})
-                return
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected shadow decision run error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.CREATED, response_payload)
-            return
-
-        if parsed.path == "/agent/decisions/shadow/reconcile":
-            try:
-                payload = _read_json_body(self)
-                response_payload = _reconcile_shadow_decision(payload)
-            except ValueError as exc:
-                _json_response(self, HTTPStatus.BAD_REQUEST, {"error": str(exc)})
-                return
-            except Exception as exc:  # pragma: no cover
-                logger.exception("Unexpected shadow decision reconcile error")
-                _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-                return
-            _json_response(self, HTTPStatus.OK, response_payload)
-            return
-
-        if parsed.path != "/coupons/generate":
-            _json_response(self, HTTPStatus.NOT_FOUND, {"error": "Not found"})
-            return
-
-        try:
-            payload = _read_json_body(self)
-            response_payload = _generate_coupon(payload)
-        except ValueError as exc:
-            _json_response(self, HTTPStatus.BAD_REQUEST, {"error": str(exc)})
-            return
-        except Exception as exc:  # pragma: no cover
-            logger.exception("Unexpected coupon generation error")
-            _json_response(self, HTTPStatus.INTERNAL_SERVER_ERROR, {"error": str(exc)})
-            return
-
-        _json_response(self, HTTPStatus.CREATED, response_payload)
-
-    def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
-        logger.info("%s - %s", self.address_string(), format % args)
-
-
-def create_server(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> ThreadingHTTPServer:
-    return ThreadingHTTPServer((host, port), ChurnServiceHandler)
-
-
-def run_server(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s - %(message)s")
-    server = create_server(host=host, port=port)
-    logger.info("Starting churn service on %s:%s", host, port)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        logger.info("Stopping churn service")
-    finally:
-        server.server_close()
-
-
-if __name__ == "__main__":
-    run_server()

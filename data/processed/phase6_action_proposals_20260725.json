@@ -1,8 +1,8 @@
 [
   {
-    "proposal_id": "p6-20260725-0d04b226",
+    "proposal_id": "p6-20260725-bab59ef1",
     "proposal_run_date": "20260725",
-    "created_at": "2026-07-24T10:57:36Z",
+    "created_at": "2026-07-30T12:04:54Z",
     "intervention_id": "INT-02",
     "source_name": "ResearchGate",
     "ref_id": "[4]",
@@ -20,6 +20,6 @@
     "decision_status": "approved",
     "decision_reason": "Approved for simulated launch",
     "decided_by": "architect.openclaw@gmail.com",
-    "decision_ts": "2026-07-24T10:57:36Z"
+    "decision_ts": "2026-07-30T12:04:54Z"
   }
 ]

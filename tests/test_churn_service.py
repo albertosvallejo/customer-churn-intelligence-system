@@ -5,6 +5,8 @@ import threading
 import tempfile
 import unittest
 from pathlib import Path
+
+import pandas as pd
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 from unittest.mock import patch
@@ -14,17 +16,25 @@ SRC_DIR = PROJECT_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-_tmpdir = tempfile.TemporaryDirectory()
-os.environ["CHURN_DB_URL"] = f"sqlite:///{Path(_tmpdir.name) / 'test_ops.sqlite'}"
-
 import api.churn_service as churn_service
 from api.churn_service import COUPON_REGISTRY_PATH, create_server
 from evidence.phase6_integration import build_action_proposals
+from evidence.phase7_integration import load_integrated_actions
+from evidence.phase7_proposal_builder import build_and_write_action_drafts
 
 
 class TestChurnService(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls._tmpdir = tempfile.TemporaryDirectory()
+        os.environ["CHURN_DB_URL"] = f"sqlite:///{Path(cls._tmpdir.name) / 'test_ops.sqlite'}"
+        os.environ["PHASE7_REVIEW_TOKEN"] = "phase7-test-token"
+        churn_service.DEFAULT_DB_URL = os.environ["CHURN_DB_URL"]
+        try:
+            churn_service._ops_engine().dispose()
+        except Exception:
+            pass
+        churn_service._ops_engine.cache_clear()
         cls._registry_backup = None
         if COUPON_REGISTRY_PATH.exists():
             cls._registry_backup = COUPON_REGISTRY_PATH.read_text(encoding="utf-8")
@@ -49,10 +59,42 @@ class TestChurnService(unittest.TestCase):
         cached_engine = churn_service._ops_engine()
         cached_engine.dispose()
         churn_service._ops_engine.cache_clear()
-        _tmpdir.cleanup()
+        cls._tmpdir.cleanup()
 
     def _url(self, path: str) -> str:
         return f"http://127.0.0.1:{self.port}{path}"
+
+    def _phase7_headers(self) -> dict[str, str]:
+        return {"Content-Type": "application/json", "X-Phase7-Token": os.environ["PHASE7_REVIEW_TOKEN"]}
+
+    def _reset_phase7_run_state(self, run_date: str) -> None:
+        processed = PROJECT_ROOT / "data" / "processed"
+        reports = PROJECT_ROOT / "reports"
+        for path in [
+            processed / f"phase7_action_drafts_{run_date}.json",
+            processed / f"phase7_integrated_actions_{run_date}.json",
+            processed / f"phase7_kpi_status_{run_date}.json",
+            processed / f"phase7_n8n_payload_{run_date}.json",
+            reports / f"phase7_integrated_actions_{run_date}.md",
+            reports / f"phase7_kpi_status_{run_date}.md",
+        ]:
+            if path.exists():
+                path.unlink()
+
+        parquet_paths = [
+            processed / "phase7_action_history_log.parquet",
+            processed / "phase7_stat_launch_requests.parquet",
+            processed / "phase7_stat_test_runs.parquet",
+        ]
+        for parquet_path in parquet_paths:
+            if parquet_path.exists():
+                parquet_path.unlink()
+
+    def _prepare_phase7_draft_fixture(self, run_date: str) -> None:
+        self._reset_phase7_run_state(run_date)
+        draft_source = PROJECT_ROOT / "data" / "processed" / "phase7_action_drafts_20260727.json"
+        draft_target = PROJECT_ROOT / "data" / "processed" / f"phase7_action_drafts_{run_date}.json"
+        draft_target.write_text(draft_source.read_text(encoding="utf-8"), encoding="utf-8")
 
     def test_health_endpoint(self):
         with urlopen(self._url("/health")) as response:
@@ -94,7 +136,7 @@ class TestChurnService(unittest.TestCase):
                     "discount_pct": 25,
                 }
             ).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers=self._phase7_headers(),
             method="POST",
         )
         with urlopen(request) as response:
@@ -110,7 +152,7 @@ class TestChurnService(unittest.TestCase):
         request = Request(
             self._url("/coupons/generate"),
             data=json.dumps({"customer_unique_id": "cust_001"}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers=self._phase7_headers(),
             method="POST",
         )
         with self.assertRaises(HTTPError) as context:
@@ -184,7 +226,7 @@ class TestChurnService(unittest.TestCase):
                     "input_snapshot": {"agent_action_required": False},
                 }
             ).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers=self._phase7_headers(),
             method="POST",
         )
         with urlopen(request) as response:
@@ -279,7 +321,7 @@ class TestChurnService(unittest.TestCase):
                     "decided_by": "architect.openclaw@gmail.com",
                 }
             ).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers=self._phase7_headers(),
             method="POST",
         )
         with urlopen(decision_request) as response:
@@ -309,7 +351,7 @@ class TestChurnService(unittest.TestCase):
                     "decided_by": "architect.openclaw@gmail.com",
                 }
             ).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers=self._phase7_headers(),
             method="POST",
         )
         with urlopen(decision_request) as response:
@@ -324,7 +366,7 @@ class TestChurnService(unittest.TestCase):
                     "launched_by": "architect.openclaw@gmail.com",
                 }
             ).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers=self._phase7_headers(),
             method="POST",
         )
         with urlopen(launch_request) as response:
@@ -341,6 +383,786 @@ class TestChurnService(unittest.TestCase):
             self.assertEqual(response.status, 200)
             n8n_payload = json.loads(response.read().decode("utf-8"))
         self.assertGreaterEqual(n8n_payload["action_count"], 1)
+
+    def test_phase7_reporting_page_endpoint(self):
+        run_date = "20260730"
+        processed = PROJECT_ROOT / "data" / "processed"
+        phase6_kpi_path = processed / "phase6_kpi_status_20260730.json"
+        history_path = processed / "phase7_action_history_log.parquet"
+
+        existing_kpi = phase6_kpi_path.read_text(encoding="utf-8") if phase6_kpi_path.exists() else None
+        existing_history = history_path.read_bytes() if history_path.exists() else None
+        try:
+            phase6_kpi_path.write_text(
+                json.dumps(
+                    {
+                        "status": "ok",
+                        "generated_at": "2026-07-30T08:00:00Z",
+                        "deployment_mode": "simulated",
+                        "test_count": 1,
+                        "records": [
+                            {
+                                "proposal_id": "p6-001",
+                                "primary_kpi": "conversion_rate",
+                                "status": "completed",
+                                "verdict": "B_wins",
+                                "conversion_lift": 0.03,
+                                "guardrail_breach": False,
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            pd.DataFrame(
+                [
+                    {
+                        "event_id": "evt-reporting-1",
+                        "event_type": "governance_decision",
+                        "action_id": "P7-ACT-010",
+                        "proposal_id": "P7-DRAFT-010",
+                        "proposal_run_date": run_date,
+                        "decision_status": "approved",
+                        "decision_reason": "Approved for reporting page",
+                    }
+                ]
+            ).to_parquet(history_path, index=False)
+
+            with urlopen(self._url(f"/customer-churn/dashboard?run_date={run_date}")) as response:
+                self.assertEqual(response.status, 200)
+                self.assertIn("text/html", response.headers.get("Content-Type", ""))
+                body = response.read().decode("utf-8")
+            self.assertIn("Churn Campaigns Dashboard", body)
+            self.assertIn("History of all actions", body)
+            self.assertIn("Approved For Reporting Page", body)
+            self.assertIn("window.location.reload()", body)
+            self.assertNotIn("/phase7/actions/post-test-decision", body)
+            self.assertNotIn("/phase7/stat-launch-requests", body)
+        finally:
+            if existing_kpi is None:
+                phase6_kpi_path.unlink(missing_ok=True)
+            else:
+                phase6_kpi_path.write_text(existing_kpi, encoding="utf-8")
+            if existing_history is None:
+                history_path.unlink(missing_ok=True)
+            else:
+                history_path.write_bytes(existing_history)
+
+    def test_phase7_review_page_2_2_endpoints_and_token_gate(self):
+        run_date = "20260726"
+        self._prepare_phase7_draft_fixture(run_date)
+
+        with urlopen(self._url(f"/phase7/integrated-actions/latest?run_date={run_date}&refresh=true")) as response:
+            integrated_payload = json.loads(response.read().decode("utf-8"))
+
+        pending_actions = [
+            action["action_id"]
+            for action in integrated_payload["integrated"]["actions"]
+            if action.get("approval_status") == "pending_review"
+        ]
+        incumbent_action_id, challenger_action_id = pending_actions[:2]
+
+        for action_id, reason in ((incumbent_action_id, "Incumbent active"), (challenger_action_id, "Challenger approved")):
+            decision_request = Request(
+                self._url("/phase7/actions/decision"),
+                data=json.dumps(
+                    {
+                        "action_id": action_id,
+                        "proposal_run_date": run_date,
+                        "decision_status": "approved",
+                        "decision_reason": reason,
+                        "decided_by": "architect.openclaw@gmail.com",
+                    }
+                ).encode("utf-8"),
+                headers=self._phase7_headers(),
+                method="POST",
+            )
+            with urlopen(decision_request) as response:
+                self.assertEqual(response.status, 201)
+
+        integrated = load_integrated_actions(project_root=PROJECT_ROOT, run_date=run_date)
+        incumbent = next(action for action in integrated["actions"] if action["action_id"] == incumbent_action_id)
+        incumbent["lifecycle_state"] = "active_winner"
+        (PROJECT_ROOT / "data" / "processed" / f"phase7_integrated_actions_{run_date}.json").write_text(
+            json.dumps(integrated, indent=2) + "\n", encoding="utf-8"
+        )
+
+        create_launch_request = Request(
+            self._url("/phase7/stat-launch-requests"),
+            data=json.dumps(
+                {
+                    "action_id": challenger_action_id,
+                    "proposal_run_date": run_date,
+                    "requested_by": "architect.openclaw@gmail.com",
+                    "control_n": 1200,
+                    "control_converted": 108,
+                    "control_opt_out": 12,
+                    "variant_n": 1200,
+                    "variant_converted": 180,
+                    "variant_opt_out": 12,
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(create_launch_request) as response:
+            launch_request_payload = json.loads(response.read().decode("utf-8"))
+
+        execute_request = Request(
+            self._url("/phase7/stat-launch-requests/execute"),
+            data=json.dumps(
+                {
+                    "launch_request_id": launch_request_payload["launch_request_id"],
+                    "executed_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(execute_request) as response:
+            self.assertEqual(response.status, 201)
+
+        with urlopen(self._url(f"/customer-churn/tested-actions-approval?run_date={run_date}")) as response:
+            self.assertEqual(response.status, 200)
+            body = response.read().decode("utf-8")
+        self.assertIn("Tested Actions Approval", body)
+        self.assertIn("Both proposals passed statistical and guardrail checks", body)
+        self.assertIn("/phase7/actions/post-test-decision", body)
+        self.assertNotIn("/phase7/actions/decision", body)
+        self.assertNotIn("setInterval", body)
+
+        with urlopen(self._url(f"/customer-churn/tested-actions-approval/data?run_date={run_date}")) as response:
+            self.assertEqual(response.status, 200)
+            payload = json.loads(response.read().decode("utf-8"))
+        self.assertIn("pending_pre_test_actions", payload)
+        self.assertGreaterEqual(payload["post_test_pending_count"], 1)
+        self.assertIn(
+            challenger_action_id,
+            [entry["action_id"] for entry in payload["pending_post_test_decisions"]],
+        )
+
+        invalid_data_request = Request(
+            self._url(f"/customer-churn/tested-actions-approval/data?run_date={run_date}"),
+            headers={"X-Phase7-Token": "wrong-token"},
+        )
+        with urlopen(invalid_data_request) as response:
+            self.assertEqual(response.status, 200)
+
+    def test_phase7_review_token_rejects_write_before_persisting_any_change(self):
+        run_date = "20260732"
+        self._prepare_phase7_draft_fixture(run_date)
+
+        with urlopen(self._url(f"/phase7/integrated-actions/latest?run_date={run_date}&refresh=true")) as response:
+            integrated_payload = json.loads(response.read().decode("utf-8"))
+        action_id = next(
+            action["action_id"]
+            for action in integrated_payload["integrated"]["actions"]
+            if action.get("approval_status") == "pending_review"
+        )
+
+        before = load_integrated_actions(project_root=PROJECT_ROOT, run_date=run_date)
+        before_action = next(action for action in before["actions"] if action["action_id"] == action_id)
+        self.assertEqual(before_action["approval_status"], "pending_review")
+
+        invalid_request = Request(
+            self._url("/phase7/actions/decision"),
+            data=json.dumps(
+                {
+                    "action_id": action_id,
+                    "proposal_run_date": run_date,
+                    "decision_status": "approved",
+                    "decision_reason": "Should be rejected atomically",
+                    "decided_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json", "X-Phase7-Token": "wrong-token"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as context:
+            urlopen(invalid_request)
+        self.assertEqual(context.exception.code, 401)
+
+        after = load_integrated_actions(project_root=PROJECT_ROOT, run_date=run_date)
+        after_action = next(action for action in after["actions"] if action["action_id"] == action_id)
+        self.assertEqual(after_action["approval_status"], before_action["approval_status"])
+        self.assertEqual(after_action["lifecycle_state"], before_action["lifecycle_state"])
+        self.assertEqual(after_action.get("decision_reason"), before_action.get("decision_reason"))
+
+    def test_phase7_review_token_rejects_launch_request_and_execute_routes(self):
+        run_date = "20260735"
+        self._prepare_phase7_draft_fixture(run_date)
+
+        with urlopen(self._url(f"/phase7/integrated-actions/latest?run_date={run_date}&refresh=true")) as response:
+            integrated_payload = json.loads(response.read().decode("utf-8"))
+        action_id = next(
+            action["action_id"]
+            for action in integrated_payload["integrated"]["actions"]
+            if action.get("approval_status") == "pending_review"
+        )
+
+        decision_request = Request(
+            self._url("/phase7/actions/decision"),
+            data=json.dumps(
+                {
+                    "action_id": action_id,
+                    "proposal_run_date": run_date,
+                    "decision_status": "approved",
+                    "decision_reason": "Approved for launch-request auth test",
+                    "decided_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(decision_request) as response:
+            self.assertEqual(response.status, 201)
+
+        invalid_create_request = Request(
+            self._url("/phase7/stat-launch-requests"),
+            data=json.dumps(
+                {
+                    "action_id": action_id,
+                    "proposal_run_date": run_date,
+                    "requested_by": "architect.openclaw@gmail.com",
+                    "control_n": 1200,
+                    "control_converted": 108,
+                    "control_opt_out": 12,
+                    "variant_n": 1200,
+                    "variant_converted": 111,
+                    "variant_opt_out": 12,
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json", "X-Phase7-Token": "wrong-token"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as context:
+            urlopen(invalid_create_request)
+        self.assertEqual(context.exception.code, 401)
+
+        with urlopen(self._url(f"/phase7/stat-launch-requests/latest?run_date={run_date}")) as response:
+            requests_payload = json.loads(response.read().decode("utf-8"))
+        self.assertEqual(requests_payload["requests"], [])
+
+        valid_create_request = Request(
+            self._url("/phase7/stat-launch-requests"),
+            data=json.dumps(
+                {
+                    "action_id": action_id,
+                    "proposal_run_date": run_date,
+                    "requested_by": "architect.openclaw@gmail.com",
+                    "control_n": 1200,
+                    "control_converted": 108,
+                    "control_opt_out": 12,
+                    "variant_n": 1200,
+                    "variant_converted": 111,
+                    "variant_opt_out": 12,
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(valid_create_request) as response:
+            launch_request_payload = json.loads(response.read().decode("utf-8"))
+
+        invalid_execute_request = Request(
+            self._url("/phase7/stat-launch-requests/execute"),
+            data=json.dumps(
+                {
+                    "launch_request_id": launch_request_payload["launch_request_id"],
+                    "executed_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers={"Content-Type": "application/json", "X-Phase7-Token": "wrong-token"},
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as context:
+            urlopen(invalid_execute_request)
+        self.assertEqual(context.exception.code, 401)
+
+        with urlopen(self._url(f"/phase7/stat-launch-requests/latest?run_date={run_date}")) as response:
+            requests_after = json.loads(response.read().decode("utf-8"))
+        pending = [row for row in requests_after["requests"] if row["launch_request_id"] == launch_request_payload["launch_request_id"]]
+        self.assertEqual(len(pending), 1)
+        self.assertEqual(pending[0]["request_status"], "pending_execution")
+
+    def test_phase7_review_page_post_test_write_persists_and_refreshes_queue_state(self):
+        run_date = "20260733"
+        self._prepare_phase7_draft_fixture(run_date)
+
+        with urlopen(self._url(f"/phase7/integrated-actions/latest?run_date={run_date}&refresh=true")) as response:
+            integrated_payload = json.loads(response.read().decode("utf-8"))
+
+        pending_actions = [
+            action["action_id"]
+            for action in integrated_payload["integrated"]["actions"]
+            if action.get("approval_status") == "pending_review"
+        ]
+        incumbent_action_id, challenger_action_id = pending_actions[:2]
+
+        for action_id, reason in ((incumbent_action_id, "Incumbent active"), (challenger_action_id, "Challenger approved")):
+            decision_request = Request(
+                self._url("/phase7/actions/decision"),
+                data=json.dumps(
+                    {
+                        "action_id": action_id,
+                        "proposal_run_date": run_date,
+                        "decision_status": "approved",
+                        "decision_reason": reason,
+                        "decided_by": "architect.openclaw@gmail.com",
+                    }
+                ).encode("utf-8"),
+                headers=self._phase7_headers(),
+                method="POST",
+            )
+            with urlopen(decision_request) as response:
+                self.assertEqual(response.status, 201)
+
+        integrated = load_integrated_actions(project_root=PROJECT_ROOT, run_date=run_date)
+        incumbent = next(action for action in integrated["actions"] if action["action_id"] == incumbent_action_id)
+        incumbent["lifecycle_state"] = "active_winner"
+        (PROJECT_ROOT / "data" / "processed" / f"phase7_integrated_actions_{run_date}.json").write_text(
+            json.dumps(integrated, indent=2) + "\n", encoding="utf-8"
+        )
+
+        create_launch_request = Request(
+            self._url("/phase7/stat-launch-requests"),
+            data=json.dumps(
+                {
+                    "action_id": challenger_action_id,
+                    "proposal_run_date": run_date,
+                    "requested_by": "architect.openclaw@gmail.com",
+                    "control_n": 1200,
+                    "control_converted": 108,
+                    "control_opt_out": 12,
+                    "variant_n": 1200,
+                    "variant_converted": 180,
+                    "variant_opt_out": 12,
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(create_launch_request) as response:
+            launch_request_payload = json.loads(response.read().decode("utf-8"))
+
+        execute_request = Request(
+            self._url("/phase7/stat-launch-requests/execute"),
+            data=json.dumps(
+                {
+                    "launch_request_id": launch_request_payload["launch_request_id"],
+                    "executed_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(execute_request) as response:
+            self.assertEqual(response.status, 201)
+
+        with urlopen(self._url(f"/customer-churn/tested-actions-approval/data?run_date={run_date}")) as response:
+            before_payload = json.loads(response.read().decode("utf-8"))
+        self.assertIn(
+            challenger_action_id,
+            [entry["action_id"] for entry in before_payload["pending_post_test_decisions"]],
+        )
+
+        post_test_request = Request(
+            self._url("/phase7/actions/post-test-decision"),
+            data=json.dumps(
+                {
+                    "action_id": challenger_action_id,
+                    "proposal_run_date": run_date,
+                    "comparison_target_action_id": incumbent_action_id,
+                    "comparison_outcome": "candidate_wins",
+                    "decision_type": "promote_challenger",
+                    "previous_incumbent_status": "replaced",
+                    "decision_reason": "Promote challenger over the active incumbent",
+                    "decided_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(post_test_request) as response:
+            self.assertEqual(response.status, 201)
+
+        with urlopen(self._url(f"/customer-churn/tested-actions-approval/data?run_date={run_date}")) as response:
+            after_payload = json.loads(response.read().decode("utf-8"))
+        self.assertNotIn(
+            challenger_action_id,
+            [entry["action_id"] for entry in after_payload["pending_post_test_decisions"]],
+        )
+
+        integrated_after = load_integrated_actions(project_root=PROJECT_ROOT, run_date=run_date)
+        challenger_after = next(action for action in integrated_after["actions"] if action["action_id"] == challenger_action_id)
+        self.assertEqual(challenger_after["decision_type"], "promote_challenger")
+
+    def test_phase7_integrated_actions_and_stat_launch_endpoints(self):
+        run_date = "20260728"
+        self._prepare_phase7_draft_fixture(run_date)
+
+        with urlopen(self._url(f"/phase7/integrated-actions/latest?run_date={run_date}&refresh=true")) as response:
+            self.assertEqual(response.status, 200)
+            integrated_payload = json.loads(response.read().decode("utf-8"))
+        self.assertGreaterEqual(integrated_payload["integrated"]["action_count"], 1)
+        action_id = next(
+            action["action_id"]
+            for action in integrated_payload["integrated"]["actions"]
+            if action.get("approval_status") == "pending_review"
+        )
+
+        decision_request = Request(
+            self._url("/phase7/actions/decision"),
+            data=json.dumps(
+                {
+                    "action_id": action_id,
+                    "proposal_run_date": run_date,
+                    "decision_status": "approved",
+                    "decision_reason": "Approved for statistical evaluation",
+                    "decided_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(decision_request) as response:
+            self.assertEqual(response.status, 201)
+
+        create_launch_request = Request(
+            self._url("/phase7/stat-launch-requests"),
+            data=json.dumps(
+                {
+                    "action_id": action_id,
+                    "proposal_run_date": run_date,
+                    "requested_by": "architect.openclaw@gmail.com",
+                    "control_n": 1200,
+                    "control_converted": 108,
+                    "control_opt_out": 12,
+                    "variant_n": 1200,
+                    "variant_converted": 111,
+                    "variant_opt_out": 12,
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(create_launch_request) as response:
+            self.assertEqual(response.status, 201)
+            launch_request_payload = json.loads(response.read().decode("utf-8"))
+
+        execute_request = Request(
+            self._url("/phase7/stat-launch-requests/execute"),
+            data=json.dumps(
+                {
+                    "launch_request_id": launch_request_payload["launch_request_id"],
+                    "executed_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(execute_request) as response:
+            self.assertEqual(response.status, 201)
+            launch_payload = json.loads(response.read().decode("utf-8"))
+        self.assertEqual(launch_payload["action_id"], action_id)
+        self.assertEqual(launch_payload["verdict"], "no_significant_difference")
+
+        with urlopen(self._url(f"/phase7/stat-tests/latest?run_date={run_date}")) as response:
+            self.assertEqual(response.status, 200)
+            stat_payload = json.loads(response.read().decode("utf-8"))
+        self.assertGreaterEqual(stat_payload["stat_run_count"], 1)
+
+        with urlopen(self._url(f"/phase7/stat-launch-requests/latest?run_date={run_date}")) as response:
+            self.assertEqual(response.status, 200)
+            requests_payload = json.loads(response.read().decode("utf-8"))
+        self.assertGreaterEqual(len(requests_payload["requests"]), 1)
+
+        with urlopen(self._url(f"/phase7/action-history/latest?run_date={run_date}")) as response:
+            self.assertEqual(response.status, 200)
+            history_payload = json.loads(response.read().decode("utf-8"))
+        self.assertGreaterEqual(len(history_payload["history"]), 2)
+        self.assertNotIn("stat_launch_requested", [row["event_type"] for row in history_payload["history"]])
+        self.assertTrue(all(row["visibility_status"].startswith("visible") for row in history_payload["history"]))
+
+    def test_phase7_direct_stat_launch_endpoint_is_no_longer_public(self):
+        request = Request(
+            self._url("/phase7/stat-tests/launch"),
+            data=json.dumps(
+                {
+                    "action_id": "P7-ACT-003",
+                    "proposal_run_date": "20260727",
+                    "launched_by": "architect.openclaw@gmail.com",
+                    "control_n": 1200,
+                    "control_converted": 108,
+                    "control_opt_out": 12,
+                    "variant_n": 1200,
+                    "variant_converted": 111,
+                    "variant_opt_out": 12,
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with self.assertRaises(HTTPError) as ctx:
+            urlopen(request)
+        self.assertEqual(ctx.exception.code, 410)
+        payload = json.loads(ctx.exception.read().decode("utf-8"))
+        self.assertTrue(payload["deprecated"])
+
+    def test_phase7_kpi_and_n8n_endpoints(self):
+        run_date = "20260730"
+        self._prepare_phase7_draft_fixture(run_date)
+
+        with urlopen(self._url(f"/phase7/integrated-actions/latest?run_date={run_date}&refresh=true")) as response:
+            self.assertEqual(response.status, 200)
+            integrated_payload = json.loads(response.read().decode("utf-8"))
+        action_id = next(
+            action["action_id"]
+            for action in integrated_payload["integrated"]["actions"]
+            if action.get("approval_status") == "pending_review"
+        )
+
+        decision_request = Request(
+            self._url("/phase7/actions/decision"),
+            data=json.dumps(
+                {
+                    "action_id": action_id,
+                    "proposal_run_date": run_date,
+                    "decision_status": "approved",
+                    "decision_reason": "Approved for statistical evaluation",
+                    "decided_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(decision_request) as response:
+            self.assertEqual(response.status, 201)
+
+        create_launch_request = Request(
+            self._url("/phase7/stat-launch-requests"),
+            data=json.dumps(
+                {
+                    "action_id": action_id,
+                    "proposal_run_date": run_date,
+                    "requested_by": "architect.openclaw@gmail.com",
+                    "control_n": 1200,
+                    "control_converted": 108,
+                    "control_opt_out": 12,
+                    "variant_n": 1200,
+                    "variant_converted": 111,
+                    "variant_opt_out": 12,
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(create_launch_request) as response:
+            self.assertEqual(response.status, 201)
+            launch_request_payload = json.loads(response.read().decode("utf-8"))
+        execute_request = Request(
+            self._url("/phase7/stat-launch-requests/execute"),
+            data=json.dumps(
+                {
+                    "launch_request_id": launch_request_payload["launch_request_id"],
+                    "executed_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(execute_request) as response:
+            self.assertEqual(response.status, 201)
+        with urlopen(self._url(f"/phase7/kpis/latest?run_date={run_date}&refresh=true")) as response:
+            self.assertEqual(response.status, 200)
+            kpi_payload = json.loads(response.read().decode("utf-8"))
+        self.assertGreaterEqual(kpi_payload["stat_run_count"], 1)
+        with urlopen(self._url(f"/phase7/n8n-payload/latest?run_date={run_date}&refresh=true")) as response:
+            self.assertEqual(response.status, 200)
+            n8n_payload = json.loads(response.read().decode("utf-8"))
+        self.assertGreaterEqual(n8n_payload["action_count"], 1)
+
+    def test_phase7_post_test_decision_pending_endpoint(self):
+        run_date = "20260731"
+        self._prepare_phase7_draft_fixture(run_date)
+
+        with urlopen(self._url(f"/phase7/integrated-actions/latest?run_date={run_date}&refresh=true")) as response:
+            self.assertEqual(response.status, 200)
+            integrated_payload = json.loads(response.read().decode("utf-8"))
+
+        pending_actions = [
+            action["action_id"]
+            for action in integrated_payload["integrated"]["actions"]
+            if action.get("approval_status") == "pending_review"
+        ]
+        incumbent_action_id, challenger_action_id = pending_actions[:2]
+
+        for action_id, reason in ((incumbent_action_id, "Incumbent active"), (challenger_action_id, "Challenger approved")):
+            decision_request = Request(
+                self._url("/phase7/actions/decision"),
+                data=json.dumps(
+                    {
+                        "action_id": action_id,
+                        "proposal_run_date": run_date,
+                        "decision_status": "approved",
+                        "decision_reason": reason,
+                        "decided_by": "architect.openclaw@gmail.com",
+                    }
+                ).encode("utf-8"),
+                headers=self._phase7_headers(),
+                method="POST",
+            )
+            with urlopen(decision_request) as response:
+                self.assertEqual(response.status, 201)
+
+        integrated = load_integrated_actions(project_root=PROJECT_ROOT, run_date=run_date)
+        incumbent = next(action for action in integrated["actions"] if action["action_id"] == incumbent_action_id)
+        incumbent["lifecycle_state"] = "active_winner"
+        incumbent["latest_stat_run_id"] = "p7-stat-incumbent"
+        (PROJECT_ROOT / "data" / "processed" / f"phase7_integrated_actions_{run_date}.json").write_text(
+            json.dumps(integrated, indent=2) + "\n", encoding="utf-8"
+        )
+
+        post_test_request = Request(
+            self._url("/phase7/stat-launch-requests"),
+            data=json.dumps(
+                {
+                    "action_id": challenger_action_id,
+                    "proposal_run_date": run_date,
+                    "requested_by": "architect.openclaw@gmail.com",
+                    "control_n": 1200,
+                    "control_converted": 108,
+                    "control_opt_out": 12,
+                    "variant_n": 1200,
+                    "variant_converted": 180,
+                    "variant_opt_out": 12,
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(post_test_request) as response:
+            launch_request_payload = json.loads(response.read().decode("utf-8"))
+
+        execute_request = Request(
+            self._url("/phase7/stat-launch-requests/execute"),
+            data=json.dumps(
+                {
+                    "launch_request_id": launch_request_payload["launch_request_id"],
+                    "executed_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(execute_request) as response:
+            self.assertEqual(response.status, 201)
+
+        with urlopen(self._url(f"/phase7/post-test-decisions/pending?run_date={run_date}")) as response:
+            self.assertEqual(response.status, 200)
+            payload = json.loads(response.read().decode("utf-8"))
+        self.assertEqual(payload["pending_count"], 1)
+        self.assertEqual(payload["pending_decisions"][0]["allowed_comparison_outcomes"], ["candidate_wins"])
+        self.assertEqual(payload["pending_decisions"][0]["candidate_incumbents"][0]["action_id"], incumbent_action_id)
+
+    def test_phase7_post_test_decision_endpoint(self):
+        run_date = "20260729"
+        self._prepare_phase7_draft_fixture(run_date)
+
+        with urlopen(self._url(f"/phase7/integrated-actions/latest?run_date={run_date}&refresh=true")) as response:
+            self.assertEqual(response.status, 200)
+            integrated_payload = json.loads(response.read().decode("utf-8"))
+
+        pending_actions = [
+            action["action_id"]
+            for action in integrated_payload["integrated"]["actions"]
+            if action.get("approval_status") == "pending_review"
+        ]
+        incumbent_action_id, challenger_action_id = pending_actions[:2]
+
+        for action_id, reason in ((incumbent_action_id, "Incumbent active"), (challenger_action_id, "Challenger approved")):
+            decision_request = Request(
+                self._url("/phase7/actions/decision"),
+                data=json.dumps(
+                    {
+                        "action_id": action_id,
+                        "proposal_run_date": run_date,
+                        "decision_status": "approved",
+                        "decision_reason": reason,
+                        "decided_by": "architect.openclaw@gmail.com",
+                    }
+                ).encode("utf-8"),
+                headers=self._phase7_headers(),
+                method="POST",
+            )
+            with urlopen(decision_request) as response:
+                self.assertEqual(response.status, 201)
+
+        create_launch_request = Request(
+            self._url("/phase7/stat-launch-requests"),
+            data=json.dumps(
+                {
+                    "action_id": challenger_action_id,
+                    "proposal_run_date": run_date,
+                    "requested_by": "architect.openclaw@gmail.com",
+                    "control_n": 1200,
+                    "control_converted": 108,
+                    "control_opt_out": 12,
+                    "variant_n": 1200,
+                    "variant_converted": 180,
+                    "variant_opt_out": 12,
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(create_launch_request) as response:
+            self.assertEqual(response.status, 201)
+            launch_request_payload = json.loads(response.read().decode("utf-8"))
+
+        execute_request = Request(
+            self._url("/phase7/stat-launch-requests/execute"),
+            data=json.dumps(
+                {
+                    "launch_request_id": launch_request_payload["launch_request_id"],
+                    "executed_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(execute_request) as response:
+            self.assertEqual(response.status, 201)
+
+        post_test_request = Request(
+            self._url("/phase7/actions/post-test-decision"),
+            data=json.dumps(
+                {
+                    "action_id": challenger_action_id,
+                    "proposal_run_date": run_date,
+                    "comparison_target_action_id": incumbent_action_id,
+                    "comparison_outcome": "candidate_wins",
+                    "decision_type": "promote_challenger",
+                    "previous_incumbent_status": "replaced",
+                    "decision_reason": "Promote challenger over the active incumbent",
+                    "decided_by": "architect.openclaw@gmail.com",
+                }
+            ).encode("utf-8"),
+            headers=self._phase7_headers(),
+            method="POST",
+        )
+        with urlopen(post_test_request) as response:
+            self.assertEqual(response.status, 201)
+            payload = json.loads(response.read().decode("utf-8"))
+        self.assertEqual(payload["decision_type"], "promote_challenger")
+
+        with urlopen(self._url(f"/phase7/integrated-actions/latest?run_date={run_date}")) as response:
+            integrated_payload = json.loads(response.read().decode("utf-8"))
+        challenger = next(action for action in integrated_payload["actions"] if action["action_id"] == challenger_action_id)
+        incumbent = next(action for action in integrated_payload["actions"] if action["action_id"] == incumbent_action_id)
+        self.assertEqual(challenger["comparison_outcome"], "candidate_wins")
+        self.assertEqual(challenger["decision_type"], "promote_challenger")
+        self.assertEqual(incumbent["lifecycle_state"], "replaced")
 
     def test_phase6_ab_launch_endpoint_rejects_public_scenario_selector(self):
         build_payload = build_action_proposals(project_root=PROJECT_ROOT, run_date="20260725")

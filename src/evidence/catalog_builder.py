@@ -19,6 +19,27 @@ _STUDY_BASE_SCORE = {
 }
 _REQUIRED_ALLOWLIST_KEYS = {"phase", "cadence", "open_access_only", "source_levels", "approval"}
 _REQUIRED_APPROVAL_KEYS = {"mode", "single_approver", "ab_mode"}
+_REQUIRED_SOURCE_DISCOVERY_KEYS = {
+    "source_name",
+    "source_level",
+    "peer_review_status",
+    "open_access_verified",
+    "used_in",
+    "seed_role",
+    "source_domains",
+    "automation_scope",
+    "scraping_governance",
+}
+_REQUIRED_AUTOMATION_SCOPE_KEYS = {"pipeline_status", "allowed_channel", "scope_note"}
+_ALLOWED_PIPELINE_STATUSES = {"in_scope", "out_of_scope"}
+_ALLOWED_CHANNELS = {"manual_only", "rss_only"}
+_REQUIRED_SCRAPING_GOVERNANCE_KEYS = {
+    "mode",
+    "scraping_permitido",
+    "registry_key",
+    "status_note",
+}
+_ALLOWED_SCRAPING_RESULTS = {"sí", "no", "solo_RSS_API", "null+flag"}
 _REQUIRED_SEED_KEYS = {
     "entry_id",
     "ref_id",
@@ -67,6 +88,68 @@ def _validate_allowlist(allowlist: Dict[str, Any]) -> Dict[str, Any]:
     missing_approval = _missing_keys(approval, _REQUIRED_APPROVAL_KEYS)
     if missing_approval:
         raise ValueError(f"Phase 6 approval config missing required keys: {', '.join(missing_approval)}")
+
+    source_registry = allowlist.get("source_scraping_registry")
+    if source_registry is not None:
+        required_registry_keys = {"path", "key_fields", "required_record_fields", "allowed_results"}
+        missing_registry = _missing_keys(source_registry, required_registry_keys)
+        if missing_registry:
+            raise ValueError(
+                "source_scraping_registry is missing required keys: " + ", ".join(missing_registry)
+            )
+        if source_registry["allowed_results"] != sorted(_ALLOWED_SCRAPING_RESULTS):
+            raise ValueError("source_scraping_registry.allowed_results must match the supported scraping outcomes")
+
+    for collection_name in ("seed_sources", "expansion_pool"):
+        collection = allowlist.get(collection_name, [])
+        if collection is None:
+            continue
+        if not isinstance(collection, list):
+            raise ValueError(f"{collection_name} must be a list when present")
+        for index, entry in enumerate(collection, start=1):
+            missing_source_keys = _missing_keys(entry, _REQUIRED_SOURCE_DISCOVERY_KEYS)
+            if missing_source_keys:
+                raise ValueError(
+                    f"{collection_name} entry #{index} is missing required keys: {', '.join(missing_source_keys)}"
+                )
+
+            automation_scope = entry["automation_scope"]
+            missing_scope_keys = _missing_keys(automation_scope, _REQUIRED_AUTOMATION_SCOPE_KEYS)
+            if missing_scope_keys:
+                raise ValueError(
+                    f"{collection_name} entry #{index} automation_scope is missing required keys: "
+                    + ", ".join(missing_scope_keys)
+                )
+
+            pipeline_status = automation_scope["pipeline_status"]
+            if pipeline_status not in _ALLOWED_PIPELINE_STATUSES:
+                raise ValueError(
+                    f"{collection_name} entry #{index} has unsupported pipeline_status '{pipeline_status}'"
+                )
+
+            allowed_channel = automation_scope["allowed_channel"]
+            if allowed_channel not in _ALLOWED_CHANNELS:
+                raise ValueError(
+                    f"{collection_name} entry #{index} has unsupported allowed_channel '{allowed_channel}'"
+                )
+            if allowed_channel == "rss_only" and not automation_scope.get("rss_url"):
+                raise ValueError(
+                    f"{collection_name} entry #{index} must define automation_scope.rss_url for rss_only sources"
+                )
+
+            scraping_governance = entry["scraping_governance"]
+            missing_governance_keys = _missing_keys(scraping_governance, _REQUIRED_SCRAPING_GOVERNANCE_KEYS)
+            if missing_governance_keys:
+                raise ValueError(
+                    f"{collection_name} entry #{index} scraping_governance is missing required keys: "
+                    + ", ".join(missing_governance_keys)
+                )
+
+            scraping_result = scraping_governance["scraping_permitido"]
+            if scraping_result not in _ALLOWED_SCRAPING_RESULTS:
+                raise ValueError(
+                    f"{collection_name} entry #{index} has unsupported scraping_permitido '{scraping_result}'"
+                )
 
     return allowlist
 

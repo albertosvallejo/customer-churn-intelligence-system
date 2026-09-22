@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VivaMarket · CHURN CAMPAIGNS DASHBOARD</title>
+  <link rel="icon" type="image/x-icon" href="/static/assets/favicon.ico?v=4e21fe86" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/assets/favicon-16x16.png?v=c0870bcc" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/favicon-32x32.png?v=560cdfe2" />
+  <link rel="apple-touch-icon" href="/static/assets/apple-touch-icon.png?v=107c8023" />
+  <link rel="stylesheet" href="/static/css/dashboard-app.css?v=c891f75a" />
+</head>
+<body data-view="dashboard">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="logo-card">
+          <img src="/static/assets/logo.gif" alt="VivaMarket" />
+        </div>
+        <div class="product-meta">
+          <strong>Customer Churn Intelligence</strong>
+          <span>VivaMarket Brasil</span>
+        </div>
+        <nav aria-label="Main navigation">
+          <p class="sidebar-label">NAVIGATION</p>
+          <a class="nav-item active" href="/customer-churn/dashboard"><span class="nav-dot" aria-hidden="true"><i></i></span><span class="nav-label-full">Dashboard</span><span class="nav-label-mobile">Dashboard</span></a>
+          <a class="nav-item" href="/customer-churn/tested-actions-approval"><span class="nav-dot" aria-hidden="true"><i></i></span><span class="nav-label-full">Tested Actions Approval</span><span class="nav-label-mobile">Tested</span></a>
+          <a class="nav-item" href="/customer-churn/new-actions-testing"><span class="nav-dot" aria-hidden="true"><i></i></span><span class="nav-label-full">New Actions Approval</span><span class="nav-label-mobile">New Actions</span></a>
+        </nav>
+      </div>
+      <div class="feedback-panel">
+        <p class="sidebar-label">FEEDBACK</p>
+        <div class="stars" aria-label="Rate this dashboard">
+          <button type="button" class="selected">★</button><button type="button" class="selected">★</button><button type="button" class="selected">★</button><button type="button" class="selected">★</button><button type="button" class="selected">★</button>
+        </div>
+        <textarea placeholder="Optional comments…" aria-label="Optional feedback comments"></textarea>
+        <button class="feedback-button" type="button">Send feedback</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div id="synthetic-banner" class="synthetic-banner is-hidden">SYNTHETIC DATA — NOT REAL RESULTS</div>
+      <div class="content-wrap">
+        <header class="dashboard-hero">
+          <div>
+            <p class="eyebrow">CUSTOMER RETENTION · CAMPAIGN MONITORING</p>
+            <h1>CHURN CAMPAIGNS DASHBOARD</h1>
+            <p class="intro">Monitor recent churn campaigns, compare new proposals with existing actions, and move successful tests into a governed approval workflow.</p>
+            <p id="run-meta" class="run-meta">Loading run metadata…</p>
+          </div>
+          <div class="hero-controls">
+            <div class="refresh-control">
+              <strong>Ongoing campaigns</strong>
+              <small id="poll-meta">Auto-refresh configuration pending</small>
+            </div>
+          </div>
+        </header>
+
+        <section id="dashboard-loading" class="state-panel">Loading dashboard data…</section>
+        <section id="dashboard-error" class="state-panel is-hidden" role="alert">
+          <strong>Could not load dashboard data.</strong>
+          <p id="dashboard-error-message">Unexpected error.</p>
+          <button id="dashboard-retry" class="quiet-button" type="button">Retry</button>
+        </section>
+        <section id="dashboard-unauthorized" class="state-panel is-hidden" role="alert">
+          <strong>Unexpected authorization gate.</strong>
+          <p>This dashboard route is expected to remain readable in the current portfolio scope.</p>
+        </section>
+
+        <section id="kpi-chips" class="kpi-chips is-hidden"></section>
+
+        <section id="summary-grid" class="summary-grid is-hidden">
+          <article class="summary-card"><span class="metric-icon">↗</span><p class="summary-label">Proposals launched</p><strong class="summary-metric" data-summary="test_count">—</strong><small class="summary-explainer">Across the latest campaign run</small></article>
+          <article class="summary-card"><span class="metric-icon">✓</span><p class="summary-label">Completed tests</p><strong class="summary-metric" data-summary="completed_test_count">—</strong><small class="summary-explainer">Reached a statistical decision</small></article>
+          <article class="summary-card"><span class="metric-icon success">＋</span><p class="summary-label">Winning proposals</p><strong class="summary-metric" data-summary="winner_test_count">—</strong><small class="summary-explainer">Awaiting final approval</small></article>
+          <article class="summary-card"><span class="metric-icon safe">◇</span><p class="summary-label">Guardrail alarms</p><strong class="summary-metric" data-summary="guardrail_breach_count">—</strong><small class="summary-explainer">No guardrail breaches detected</small></article>
+        </section>
+
+        <section class="panel is-hidden" id="campaign-panel">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">LATEST TESTS</p>
+              <h2>Campaign Detail</h2>
+              <p>Performance and governance status for proposals in the latest run.</p>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="campaign-table">
+              <thead><tr><th>Proposal</th><th>KPI to Improve</th><th>Result</th><th>Test Result</th><th>Guardrail</th><th>Test period</th><th>Status</th></tr></thead>
+              <tbody id="campaign-rows"></tbody>
+            </table>
+          </div>
+          <div id="campaign-empty" class="empty-state is-hidden">No campaigns available for the selected run.</div>
+        </section>
+
+        <section class="panel history-panel is-hidden" id="history-panel">
+          <div class="section-heading">
+            <div>
+              <p class="section-kicker">AUDIT TRAIL</p>
+              <h2>History of all actions</h2>
+              <p>Complete test, risk and decision context for every action launched.</p>
+            </div>
+            <button id="history-export" class="quiet-button" type="button">Export history</button>
+          </div>
+          <div class="table-scroll">
+            <table class="history-table">
+              <thead><tr><th>Action</th><th>KPI to Improve</th><th>Result</th><th>Test Result</th><th>Guardrail</th><th>Test Period</th><th>Decision Reason</th><th>Status</th></tr></thead>
+              <tbody id="history-rows"></tbody>
+            </table>
+          </div>
+          <div id="history-empty" class="empty-state is-hidden">No visible Phase 7 history events yet.</div>
+          <div id="history-pagination" class="pagination-bar is-hidden"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="/static/js/dashboard.js?v=20260820r3"></script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+name: build-and-push-ghcr
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: albertosvallejo
+  REPO_NAME: daily-customer-churn-predictor
+  API_IMAGE_NAME: daily-customer-churn-predictor-api
+  WEB_IMAGE_NAME: daily-customer-churn-predictor-web
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    outputs:
+      api_digest: ${{ steps.build_api.outputs.digest }}
+      web_digest: ${{ steps.build_web.outputs.digest }}
+      release_tag: ${{ steps.meta.outputs.release_tag }}
+      git_sha: ${{ steps.meta.outputs.git_sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Derive metadata
+        id: meta
+        shell: bash
+        run: |
+          GIT_SHA="${GITHUB_SHA}"
+          SHORT_SHA="${GITHUB_SHA::7}"
+
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            RELEASE_TAG="${GITHUB_REF_NAME}"
+          else
+            RELEASE_TAG="manual-${SHORT_SHA}"
+          fi
+
+          echo "git_sha=${GIT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=${RELEASE_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        id: build_api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.api
+          push: true
+          provenance: false
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ env.IMAGE_OWNER }}/${{ env.REPO_NAME }}
+            org.opencontainers.image.revision=${{ steps.meta.outputs.git_sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.release_tag }}
+            org.opencontainers.image.title=Daily Customer Churn Predictor API
+            org.opencontainers.image.description=FastAPI runtime for the reproducible customer churn intelligence system
+            org.opencontainers.image.licenses=Personal Portfolio
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.API_IMAGE_NAME }}:${{ steps.meta.outputs.release_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.API_IMAGE_NAME }}:sha-${{ steps.meta.outputs.short_sha }}
+
+      - name: Build and push Web image
+        id: build_web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile.web
+          push: true
+          provenance: false
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ env.IMAGE_OWNER }}/${{ env.REPO_NAME }}
+            org.opencontainers.image.revision=${{ steps.meta.outputs.git_sha }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.release_tag }}
+            org.opencontainers.image.title=Daily Customer Churn Predictor Web
+            org.opencontainers.image.description=Nginx entrypoint for the reproducible customer churn intelligence system
+            org.opencontainers.image.licenses=Personal Portfolio
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.WEB_IMAGE_NAME }}:${{ steps.meta.outputs.release_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.WEB_IMAGE_NAME }}:sha-${{ steps.meta.outputs.short_sha }}
+
+      - name: Write image digest summary
+        shell: bash
+        run: |
+          mkdir -p dist
+          cat > dist/image-digests.env <<EOF
+          RELEASE_TAG=${{ steps.meta.outputs.release_tag }}
+          GIT_SHA=${{ steps.meta.outputs.git_sha }}
+          API_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.API_IMAGE_NAME }}@${{ steps.build_api.outputs.digest }}
+          WEB_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.WEB_IMAGE_NAME }}@${{ steps.build_web.outputs.digest }}
+          EOF
+
+          cat > dist/compose.prod.generated.yml <<EOF
+          services:
+            api:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.API_IMAGE_NAME }}@${{ steps.build_api.outputs.digest }}
+              container_name: churn-api
+              restart: unless-stopped
+              env_file:
+                - .env
+              expose:
+                - "62881"
+              healthcheck:
+                test: ["CMD-SHELL", "python /app/scripts/http_healthcheck.py --url http://127.0.0.1:62881/health || exit 1"]
+                interval: 30s
+                timeout: 5s
+                retries: 5
+                start_period: 20s
+
+            web:
+              image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/${{ env.WEB_IMAGE_NAME }}@${{ steps.build_web.outputs.digest }}
+              container_name: churn-web
+              restart: unless-stopped
+              depends_on:
+                api:
+                  condition: service_healthy
+              ports:
+                - "127.0.0.1:8080:80"
+          EOF
+
+      - name: Upload digest artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghcr-release-artifacts-${{ steps.meta.outputs.release_tag }}
+          path: dist/
+          if-no-files-found: error

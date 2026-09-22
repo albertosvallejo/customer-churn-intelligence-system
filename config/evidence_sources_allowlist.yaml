@@ -1,6 +1,6 @@
 {
   "phase": "phase6",
-  "version": "2026-07-21",
+  "version": "2026-07-27",
   "cadence": "monthly",
   "open_access_only": true,
   "source_levels": {
@@ -26,6 +26,12 @@
     "single_approver": "architect.openclaw@gmail.com",
     "ab_mode": "simulated"
   },
+  "source_scraping_registry": {
+    "path": "data/interim/phase7_source_scraping_registry.json",
+    "key_fields": ["domain", "path_pattern"],
+    "required_record_fields": ["domain", "path_pattern", "checked_at", "scraping_permitido", "method", "note"],
+    "allowed_results": ["no", "null+flag", "solo_RSS_API", "sí"]
+  },
   "seed_sources": [
     {
       "ref_id": "[1]",
@@ -35,6 +41,18 @@
       "open_access_verified": true,
       "used_in": ["INT-01"],
       "seed_role": "baseline_reference",
+      "source_domains": ["cxl.com"],
+      "automation_scope": {
+        "pipeline_status": "out_of_scope",
+        "allowed_channel": "manual_only",
+        "scope_note": "Blocked by robots.txt on the relevant blog path; documented as out of automated scope in Phase 7 v9."
+      },
+      "scraping_governance": {
+        "mode": "observed_per_article",
+        "scraping_permitido": "no",
+        "registry_key": "cxl.com::/blog/",
+        "status_note": "Baseline citation only; no automated extraction permitted for this project scope."
+      },
       "notes": "Conversion heuristics source inherited from Phase 5 static intervention catalog."
     },
     {
@@ -45,6 +63,18 @@
       "open_access_verified": true,
       "used_in": ["INT-02"],
       "seed_role": "baseline_reference",
+      "source_domains": ["researchgate.net"],
+      "automation_scope": {
+        "pipeline_status": "out_of_scope",
+        "allowed_channel": "manual_only",
+        "scope_note": "ToS closes automated extraction; kept only as baseline reference pending exact URL validation."
+      },
+      "scraping_governance": {
+        "mode": "observed_per_article",
+        "scraping_permitido": "no",
+        "registry_key": "researchgate.net::/publication/",
+        "status_note": "Baseline citation only; no automated extraction permitted for this project scope."
+      },
       "notes": "Open-access research distribution channel inherited from Phase 5 static intervention catalog."
     },
     {
@@ -55,6 +85,18 @@
       "open_access_verified": true,
       "used_in": ["INT-04"],
       "seed_role": "baseline_reference",
+      "source_domains": ["altcraft.com"],
+      "automation_scope": {
+        "pipeline_status": "out_of_scope",
+        "allowed_channel": "manual_only",
+        "scope_note": "Benchmark remains outside automated scope because the concrete INT-04 citation is still pending exact URL validation."
+      },
+      "scraping_governance": {
+        "mode": "observed_per_article",
+        "scraping_permitido": "solo_RSS_API",
+        "registry_key": "altcraft.com::/features/omni-channel-marketing",
+        "status_note": "Domain-level governance remains provisional and the concrete citation is still traceability-blocked."
+      },
       "notes": "Industry benchmark source inherited from Phase 5 static intervention catalog."
     },
     {
@@ -65,6 +107,18 @@
       "open_access_verified": true,
       "used_in": ["INT-05"],
       "seed_role": "expansion_candidate",
+      "source_domains": ["omnisend.com"],
+      "automation_scope": {
+        "pipeline_status": "out_of_scope",
+        "allowed_channel": "manual_only",
+        "scope_note": "Documented as out of automated scope because ToS prohibit automated extraction."
+      },
+      "scraping_governance": {
+        "mode": "observed_per_article",
+        "scraping_permitido": "no",
+        "registry_key": "omnisend.com::/latest-news/",
+        "status_note": "Not eligible for automated extraction in the portfolio implementation."
+      },
       "notes": "Benchmark source relevant for timing/channel evidence."
     },
     {
@@ -75,6 +129,18 @@
       "open_access_verified": true,
       "used_in": ["INT-06"],
       "seed_role": "expansion_candidate",
+      "source_domains": ["klaviyo.com"],
+      "automation_scope": {
+        "pipeline_status": "out_of_scope",
+        "allowed_channel": "manual_only",
+        "scope_note": "Documented as out of automated scope because ToS prohibit automated extraction."
+      },
+      "scraping_governance": {
+        "mode": "observed_per_article",
+        "scraping_permitido": "no",
+        "registry_key": "klaviyo.com::/blog/",
+        "status_note": "Not eligible for automated extraction in the portfolio implementation."
+      },
       "notes": "Vendor benchmark useful for actionability examples but capped by low confidence ceiling."
     }
   ],
@@ -85,7 +151,19 @@
       "peer_review_status": "preprint",
       "open_access_verified": true,
       "used_in": ["INT-01", "INT-02", "INT-04"],
-      "seed_role": "priority_expansion"
+      "seed_role": "priority_expansion",
+      "source_domains": ["papers.ssrn.com"],
+      "automation_scope": {
+        "pipeline_status": "out_of_scope",
+        "allowed_channel": "manual_only",
+        "scope_note": "Excluded from the automated portfolio scope because ToS prohibit automated querying and real fetches returned 403."
+      },
+      "scraping_governance": {
+        "mode": "observed_per_article",
+        "scraping_permitido": "no",
+        "registry_key": "papers.ssrn.com::/sol3/papers.cfm",
+        "status_note": "Documented-only source; no automated extractor traffic should target this domain."
+      }
     },
     {
       "source_name": "Google Scholar author PDF",
@@ -93,7 +171,19 @@
       "peer_review_status": "published",
       "open_access_verified": true,
       "used_in": ["INT-01", "INT-02", "INT-04"],
-      "seed_role": "priority_expansion"
+      "seed_role": "priority_expansion",
+      "source_domains": ["scholar.google.com"],
+      "automation_scope": {
+        "pipeline_status": "out_of_scope",
+        "allowed_channel": "manual_only",
+        "scope_note": "No concrete citation has been selected yet, so no automation path is activated for this candidate source."
+      },
+      "scraping_governance": {
+        "mode": "observed_per_article",
+        "scraping_permitido": "no",
+        "registry_key": "scholar.google.com::/scholar",
+        "status_note": "Frontdoor scraping is blocked and there is no selected article-level citation yet."
+      }
     },
     {
       "source_name": "Nielsen Norman Group",
@@ -101,7 +191,20 @@
       "peer_review_status": "none",
       "open_access_verified": true,
       "used_in": ["INT-01", "INT-06"],
-      "seed_role": "priority_expansion"
+      "seed_role": "priority_expansion",
+      "source_domains": ["nngroup.com", "www.nngroup.com"],
+      "automation_scope": {
+        "pipeline_status": "in_scope",
+        "allowed_channel": "rss_only",
+        "rss_url": "https://www.nngroup.com/feed/rss/",
+        "scope_note": "One of the two Phase 7 v9 sources that enter the automated pipeline, strictly through the official RSS feed."
+      },
+      "scraping_governance": {
+        "mode": "observed_per_article",
+        "scraping_permitido": "solo_RSS_API",
+        "registry_key": "nngroup.com::/articles/",
+        "status_note": "Automated extraction is limited to the official RSS channel for this project."
+      }
     },
     {
       "source_name": "Baymard Institute public content",
@@ -109,7 +212,20 @@
       "peer_review_status": "none",
       "open_access_verified": true,
       "used_in": ["INT-01", "INT-05", "INT-06"],
-      "seed_role": "priority_expansion"
+      "seed_role": "priority_expansion",
+      "source_domains": ["baymard.com", "feeds.baymard.com"],
+      "automation_scope": {
+        "pipeline_status": "in_scope",
+        "allowed_channel": "rss_only",
+        "rss_url": "https://feeds.baymard.com/baymard",
+        "scope_note": "One of the two Phase 7 v9 sources that enter the automated pipeline, strictly through the official RSS feed."
+      },
+      "scraping_governance": {
+        "mode": "observed_per_article",
+        "scraping_permitido": "solo_RSS_API",
+        "registry_key": "baymard.com::/blog/",
+        "status_note": "Automated extraction is limited to the official RSS channel for this project."
+      }
     },
     {
       "source_name": "McKinsey Insights",
@@ -117,7 +233,19 @@
       "peer_review_status": "none",
       "open_access_verified": true,
       "used_in": ["INT-02", "INT-04"],
-      "seed_role": "priority_expansion"
+      "seed_role": "priority_expansion",
+      "source_domains": ["mckinsey.com", "www.mckinsey.com"],
+      "automation_scope": {
+        "pipeline_status": "out_of_scope",
+        "allowed_channel": "manual_only",
+        "scope_note": "Documented as out of automated scope because ToS prohibit automated extraction and AI-grounding reuse without permission."
+      },
+      "scraping_governance": {
+        "mode": "observed_per_article",
+        "scraping_permitido": "no",
+        "registry_key": "mckinsey.com::/featured-insights",
+        "status_note": "Not eligible for automated extraction in the portfolio implementation."
+      }
     }
   ]
 }

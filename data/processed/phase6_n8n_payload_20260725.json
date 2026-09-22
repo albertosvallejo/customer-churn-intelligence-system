@@ -1,12 +1,12 @@
 {
   "status": "ok",
-  "generated_at": "2026-07-24T10:57:36Z",
+  "generated_at": "2026-07-30T12:04:54Z",
   "run_date": "20260725",
   "deployment_mode": "simulated",
   "action_count": 1,
   "actions": [
     {
-      "proposal_id": "p6-20260725-0d04b226",
+      "proposal_id": "p6-20260725-bab59ef1",
       "intervention_id": "INT-02",
       "deployment_mode": "simulated",
       "decision_status": "approved",
@@ -15,7 +15,7 @@
       "timing_hypothesis": "follow_up_sequence",
       "incentive_hypothesis": "repeat_offer",
       "ab_test_status": "completed",
-      "latest_ab_test_run_id": "ab-20260725-fb48ee2d",
+      "latest_ab_test_run_id": "ab-20260725-e2d40673",
       "latest_verdict": "B_wins"
     }
   ]

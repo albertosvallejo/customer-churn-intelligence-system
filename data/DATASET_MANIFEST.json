@@ -1,0 +1,14 @@
+{
+  "dataset_name": "Brazilian E-Commerce Public Dataset by Olist",
+  "source_file": "data/raw/churn_sqlite_db.sqlite",
+  "source_url": "https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce",
+  "version": "workspace-canonical-sqlite-export",
+  "license": "ODbL / dataset-specific terms as published by Olist/Kaggle",
+  "expected_sha256": "0b12d638703b8265a404032ceef38af1e9f810c800c7576600d0c0ad676ddb90",
+  "expected_size_bytes": 112730112,
+  "verified_at": "2026-08-14",
+  "notes": [
+    "The canonical local source artifact used by the notebook chain is the SQLite export stored in data/raw/churn_sqlite_db.sqlite.",
+    "Any ingestion/bootstrap step must fail explicitly if the file hash does not match this manifest."
+  ]
+}

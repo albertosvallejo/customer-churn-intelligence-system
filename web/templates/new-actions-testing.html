@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>VivaMarket · New Actions Approval</title>
+  <link rel="icon" type="image/x-icon" href="/static/assets/favicon.ico?v=4e21fe86" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/static/assets/favicon-16x16.png?v=c0870bcc" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/assets/favicon-32x32.png?v=560cdfe2" />
+  <link rel="apple-touch-icon" href="/static/assets/apple-touch-icon.png?v=107c8023" />
+  <link rel="stylesheet" href="/static/css/dashboard-app.css?v=c891f75a" />
+</head>
+<body data-view="new-actions">
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="sidebar-top">
+        <div class="logo-card"><img src="/static/assets/logo.gif" alt="VivaMarket" /></div>
+        <div class="product-meta"><strong>Customer Churn Intelligence</strong><span>VivaMarket Brasil</span></div>
+        <nav aria-label="Main navigation">
+          <p class="sidebar-label">NAVIGATION</p>
+          <a class="nav-item" href="/customer-churn/dashboard"><span class="nav-dot" aria-hidden="true"><i></i></span><span class="nav-label-full">Dashboard</span><span class="nav-label-mobile">Dashboard</span></a>
+          <a class="nav-item" href="/customer-churn/tested-actions-approval"><span class="nav-dot" aria-hidden="true"><i></i></span><span class="nav-label-full">Tested Actions Approval</span><span class="nav-label-mobile">Tested</span></a>
+          <a class="nav-item active" href="/customer-churn/new-actions-testing"><span class="nav-dot" aria-hidden="true"><i></i></span><span class="nav-label-full">New Actions Approval</span><span class="nav-label-mobile">New Actions</span></a>
+        </nav>
+      </div>
+      <div class="feedback-panel">
+        <p class="sidebar-label">FEEDBACK</p>
+        <div class="stars" aria-label="Rate this dashboard">
+          <button type="button" class="selected">★</button><button type="button" class="selected">★</button><button type="button" class="selected">★</button><button type="button" class="selected">★</button><button type="button" class="selected">★</button>
+        </div>
+        <textarea placeholder="Optional comments…" aria-label="Optional feedback comments"></textarea>
+        <button class="feedback-button" type="button">Send feedback</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div id="synthetic-banner" class="synthetic-banner is-hidden">SYNTHETIC DATA — NOT REAL RESULTS</div>
+      <div class="content-wrap">
+        <header class="approval-header">
+          <div>
+            <p class="eyebrow">GOVERNANCE · PRE-TEST REVIEW</p>
+            <h1>NEW ACTIONS APPROVAL</h1>
+            <p class="intro">Evaluate newly sourced proposals before they enter statistical testing. Every decision is recorded for traceability.</p>
+            <p id="run-meta" class="run-meta">Loading proposal queue metadata…</p>
+          </div>
+          <div class="queue-count"><span id="queue-count">—</span><p>Awaiting<br/>reviews</p></div>
+        </header>
+
+        <div id="auth-gate" class="auth-modal is-hidden" aria-hidden="true"></div>
+
+        <section id="view-loading" class="state-panel is-hidden">Loading proposal queue…</section>
+        <section id="view-error" class="state-panel is-hidden" role="alert"><strong>Could not load proposal queue.</strong><p id="view-error-message">Unexpected error.</p><button id="view-retry" class="quiet-button" type="button">Retry</button></section>
+
+        <section class="list-heading is-hidden" id="proposal-heading"><div><p class="section-kicker">PROPOSAL QUEUE</p><h2>Pending proposals before statistical test</h2><p>Review the evidence and recommended action, then choose the next lifecycle step.</p></div><div class="filter-control">Showing <strong id="proposal-pending-count">0 pending</strong></div></section>
+
+        <section id="proposal-list" class="proposal-list is-hidden"></section>
+        <div id="proposal-empty" class="empty-state is-hidden">No new actions are pending review.</div>
+      </div>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite"><span>✓</span><div class="toast-message">State refreshed.</div><small>State refreshed</small></div>
+  <script type="module" src="/static/js/new-actions.js?v=20260820r3"></script>
+</body>
+</html>

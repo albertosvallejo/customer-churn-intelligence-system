@@ -1,0 +1,7 @@
+{
+  "job_id": "churn-clean-source-20260919-091935",
+  "action": "validate",
+  "project": "customer-churn-intelligence-system",
+  "source": "/srv/repro-validation-runner/shared/trial-sources/customer-churn-intelligence-system",
+  "validated_source": "/srv/repro-validation-runner/shared/trial-sources/customer-churn-intelligence-system"
+}

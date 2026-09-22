@@ -1,36 +1,77 @@
 version: '3.9'
 services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ENV: ${APP_ENV:-local}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      MODE: ${MODE:-synthetic_demo}
+      LLM_MODE: ${LLM_MODE:-disabled}
+      PHASE7_LLM_PROVIDER: ${PHASE7_LLM_PROVIDER:-openai}
+      PHASE7_OPENAI_MODEL: ${PHASE7_OPENAI_MODEL:-}
+      PHASE7_OPENAI_REASONING_EFFORT: ${PHASE7_OPENAI_REASONING_EFFORT:-medium}
+      PHASE7_OPENAI_TEMPERATURE: ${PHASE7_OPENAI_TEMPERATURE:-}
+      PHASE7_REVIEW_TOKEN: ${PHASE7_REVIEW_TOKEN:-change-this-local-demo-token}
+      SOURCE_DB_URL: ${SOURCE_DB_URL:-}
+      CHURN_DB_URL: ${CHURN_DB_URL:-}
+      RETENTION_ACTIONS_PARQUET_PATH: ${RETENTION_ACTIONS_PARQUET_PATH:-}
+      MAX_PARQUET_AGE_HOURS: ${MAX_PARQUET_AGE_HOURS:-48}
+      CONVERSION_WINDOW_DAYS: ${CONVERSION_WINDOW_DAYS:-14}
+      CHURN_SCORING_BUNDLE: ${CHURN_SCORING_BUNDLE:-}
+      SEND_WINDOW_START_BRT: ${SEND_WINDOW_START_BRT:-09:00}
+      SEND_WINDOW_END_BRT: ${SEND_WINDOW_END_BRT:-20:00}
+      DAILY_CAP_HIGH: ${DAILY_CAP_HIGH:-600}
+      DAILY_CAP_MEDIUM: ${DAILY_CAP_MEDIUM:-1200}
+      DAILY_CAP_LOW: ${DAILY_CAP_LOW:-2000}
+      CHURN_API_HOST: ${CHURN_API_HOST:-0.0.0.0}
+      CHURN_API_PORT: ${CHURN_API_PORT:-62881}
+    ports:
+      - "62881:62881"
+    healthcheck:
+      test: ["CMD", "python3", "/app/scripts/http_healthcheck.py", "http://127.0.0.1:62881/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
   postgres:
     image: postgres:16
     restart: unless-stopped
+    profiles: ["ops-db"]
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-vivamarket}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
-  scoring-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    command: ["python3", "-m", "src.api.churn_service"]
-    env_file:
-      - .env
-    ports:
-      - "62881:62881"
-    environment:
-      CHURN_API_HOST: 0.0.0.0
-      CHURN_API_PORT: 62881
-    depends_on:
-      - postgres
-    volumes:
-      - ./:/app
 
 volumes:
   postgres_data:
