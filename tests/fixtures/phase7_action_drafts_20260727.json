@@ -1,0 +1,105 @@
+{
+  "drafts": [
+    {
+      "proposal_id": "P7-DRAFT-001",
+      "source_name": "Nielsen Norman Group",
+      "article_title": "A Concrete Definition of “Product Sense” (and How to Build It)",
+      "article_url": "https://www.nngroup.com/articles/product-sense-definition/?utm_source=rss&utm_medium=feed&utm_campaign=rss-syndication",
+      "published_at": "2026-07-24T17:00:00+00:00",
+      "summary_for_business": "Product sense involves using patterns learned through experimentation to anticipate which product decisions are likely to succeed, while recognizing when those patterns apply.",
+      "pros": [
+        "Supports more informed product decisions",
+        "Uses learning from experimentation",
+        "Emphasizes applying patterns in the right context"
+      ],
+      "cons": [
+        "Requires reliable experimentation and pattern recognition",
+        "Patterns may not apply in every situation"
+      ],
+      "recommended_action": "Use experimentation to build a library of product patterns, then evaluate whether each pattern fits the specific decision context before acting.",
+      "numeric_claims": [],
+      "numeric_claims_used": [],
+      "citation_anchor": "A Concrete Definition of “Product Sense” (and How to Build It) Product sense means predicting which product decisions will succeed based on patterns learned through experimentation — and knowing when those patterns apply.",
+      "status": "draft_ready",
+      "generation_contract_violation": false,
+      "llm_retry_used": false
+    },
+    {
+      "proposal_id": "P7-DRAFT-002",
+      "source_name": "Nielsen Norman Group",
+      "article_title": "UX-Context Design: Using UX Knowledge to Inform AI-Generated Design",
+      "article_url": "https://www.nngroup.com/articles/ux-context-design/?utm_source=rss&utm_medium=feed&utm_campaign=rss-syndication",
+      "published_at": "2026-07-24T17:00:00+00:00",
+      "summary_for_business": "As AI-generated interface work increases, UX research and design outputs should evolve from human-oriented documents into curated context that effectively guides AI.",
+      "pros": [
+        "Helps apply UX knowledge directly to AI-generated design work",
+        "May make research and design guidance more usable by AI systems",
+        "Encourages a shift toward curated, actionable design context"
+      ],
+      "cons": [
+        "Requires adapting existing UX documentation practices",
+        "The quality of AI-generated design may depend on how well context is curated"
+      ],
+      "recommended_action": "Assess current UX research and design documentation, then develop curated context formats that can guide AI-generated interface work while preserving essential UX knowledge.",
+      "numeric_claims": [],
+      "numeric_claims_used": [],
+      "citation_anchor": "UX-Context Design: Using UX Knowledge to Inform AI-Generated Design As more interface work is AI-generated, the output of research and design shifts from documents written for humans to curated context that guides AI.",
+      "status": "draft_ready",
+      "generation_contract_violation": false,
+      "llm_retry_used": false
+    },
+    {
+      "proposal_id": "P7-DRAFT-003",
+      "source_name": "Nielsen Norman Group",
+      "article_title": "Does Your Form Really Need a Dropdown List?",
+      "article_url": "https://www.nngroup.com/articles/dropdown-list/?utm_source=rss&utm_medium=feed&utm_campaign=rss-syndication",
+      "published_at": "2026-07-17T17:00:00+00:00",
+      "summary_for_business": "Dropdown lists are appropriate only in narrow, specific scenarios. Misusing them may create more harm than choosing alternative input methods.",
+      "pros": [
+        "Can be suitable for narrow, specific scenarios"
+      ],
+      "cons": [
+        "Misuse can cause more harm than alternatives"
+      ],
+      "recommended_action": "Use dropdown lists selectively and evaluate alternative input methods when the scenario is not narrow or specific.",
+      "numeric_claims": [],
+      "numeric_claims_used": [],
+      "citation_anchor": "Does Your Form Really Need a Dropdown List? Dropdown lists can be used in narrow, specific scenarios, but misuse can cause more harm than alternatives.",
+      "status": "draft_ready",
+      "generation_contract_violation": false,
+      "llm_retry_used": false
+    }
+  ],
+  "validation": [
+    {
+      "proposal_id": "P7-DRAFT-001",
+      "source_name": "Nielsen Norman Group",
+      "validation_target": "citation_anchor",
+      "numeric_claim_count": 0,
+      "numeric_claims_used": [],
+      "invalid_format": false,
+      "missing_from_citation_anchor": [],
+      "passed": true
+    },
+    {
+      "proposal_id": "P7-DRAFT-002",
+      "source_name": "Nielsen Norman Group",
+      "validation_target": "citation_anchor",
+      "numeric_claim_count": 0,
+      "numeric_claims_used": [],
+      "invalid_format": false,
+      "missing_from_citation_anchor": [],
+      "passed": true
+    },
+    {
+      "proposal_id": "P7-DRAFT-003",
+      "source_name": "Nielsen Norman Group",
+      "validation_target": "citation_anchor",
+      "numeric_claim_count": 0,
+      "numeric_claims_used": [],
+      "invalid_format": false,
+      "missing_from_citation_anchor": [],
+      "passed": true
+    }
+  ]
+}

@@ -78,8 +78,10 @@ class TestFastApiAppContract(unittest.TestCase):
     @classmethod
     def _prepare_phase7_fixture(cls, run_date: str) -> None:
         cls._cleanup_phase7_fixture(run_date)
-        draft_source = PROJECT_ROOT / "data" / "processed" / "phase7_action_drafts_20260727.json"
-        draft_target = PROJECT_ROOT / "data" / "processed" / f"phase7_action_drafts_{run_date}.json"
+        processed = PROJECT_ROOT / "data" / "processed"
+        processed.mkdir(parents=True, exist_ok=True)
+        draft_source = PROJECT_ROOT / "tests" / "fixtures" / "phase7_action_drafts_20260727.json"
+        draft_target = processed / f"phase7_action_drafts_{run_date}.json"
         draft_target.write_text(draft_source.read_text(encoding="utf-8"), encoding="utf-8")
         build_integrated_actions(project_root=PROJECT_ROOT, run_date=run_date, mode=REAL_MODE)
 
