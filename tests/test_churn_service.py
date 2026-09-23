@@ -91,34 +91,48 @@ class TestChurnService(unittest.TestCase):
     def _phase7_headers(self) -> dict[str, str]:
         return {"Content-Type": "application/json", "X-Phase7-Token": os.environ["PHASE7_REVIEW_TOKEN"]}
 
+    @staticmethod
+    def _unlink_phase7_test_state(path: Path) -> None:
+        """Borra estado efimero de un test, nunca fixtures versionados.
+
+        ``data/synthetic_demo/`` contiene artifacts comiteados que lee
+        ``tests/test_phase7_synthetic_demo_mode.py`` directamente del repo real.
+        """
+        protected_dir = (PROJECT_ROOT / "data" / "synthetic_demo").resolve()
+        resolved = path.resolve()
+        if resolved == protected_dir or protected_dir in resolved.parents:
+            raise RuntimeError(
+                f"Test helper attempted to delete a protected synthetic demo artifact: {path}"
+            )
+        path.unlink(missing_ok=True)
+
     def _reset_phase7_run_state(self, run_date: str) -> None:
         from evidence.phase7_artifacts import (
             REAL_MODE,
-            SYNTHETIC_DEMO_MODE,
             namespaced_artifact_path,
             namespaced_report_path,
         )
 
-        for mode in (REAL_MODE, SYNTHETIC_DEMO_MODE):
-            for path in [
-                namespaced_artifact_path(PROJECT_ROOT, f"phase7_action_drafts_{run_date}.json", mode),
-                namespaced_artifact_path(PROJECT_ROOT, f"phase7_integrated_actions_{run_date}.json", mode),
-                namespaced_artifact_path(PROJECT_ROOT, f"phase7_kpi_status_{run_date}.json", mode),
-                namespaced_artifact_path(PROJECT_ROOT, f"phase7_n8n_payload_{run_date}.json", mode),
-                namespaced_report_path(PROJECT_ROOT, f"phase7_integrated_actions_{run_date}.md", mode),
-                namespaced_report_path(PROJECT_ROOT, f"phase7_kpi_status_{run_date}.md", mode),
-            ]:
-                if path.exists():
-                    path.unlink()
+        # Solo se limpia el estado del modo REAL (el que usan estos tests: MODE se
+        # elimina en setUpClass y las rutas hardcodeadas apuntan a data/processed).
+        # No iterar SYNTHETIC_DEMO_MODE: sus artifacts son fixtures comiteados y
+        # borrarlos rompia test_mpb_01 segun el orden de ejecucion (regresion 2bca3b2).
+        for path in [
+            namespaced_artifact_path(PROJECT_ROOT, f"phase7_action_drafts_{run_date}.json", REAL_MODE),
+            namespaced_artifact_path(PROJECT_ROOT, f"phase7_integrated_actions_{run_date}.json", REAL_MODE),
+            namespaced_artifact_path(PROJECT_ROOT, f"phase7_kpi_status_{run_date}.json", REAL_MODE),
+            namespaced_artifact_path(PROJECT_ROOT, f"phase7_n8n_payload_{run_date}.json", REAL_MODE),
+            namespaced_report_path(PROJECT_ROOT, f"phase7_integrated_actions_{run_date}.md", REAL_MODE),
+            namespaced_report_path(PROJECT_ROOT, f"phase7_kpi_status_{run_date}.md", REAL_MODE),
+        ]:
+            self._unlink_phase7_test_state(path)
 
-            for parquet_name in (
-                "phase7_action_history_log.parquet",
-                "phase7_stat_launch_requests.parquet",
-                "phase7_stat_test_runs.parquet",
-            ):
-                parquet_path = namespaced_artifact_path(PROJECT_ROOT, parquet_name, mode)
-                if parquet_path.exists():
-                    parquet_path.unlink()
+        for parquet_name in (
+            "phase7_action_history_log.parquet",
+            "phase7_stat_launch_requests.parquet",
+            "phase7_stat_test_runs.parquet",
+        ):
+            self._unlink_phase7_test_state(namespaced_artifact_path(PROJECT_ROOT, parquet_name, REAL_MODE))
 
     def _prepare_phase7_draft_fixture(self, run_date: str) -> None:
         self._reset_phase7_run_state(run_date)
@@ -135,6 +149,16 @@ class TestChurnService(unittest.TestCase):
         )
         draft_target.parent.mkdir(parents=True, exist_ok=True)
         draft_target.write_text(draft_source.read_text(encoding="utf-8"), encoding="utf-8")
+
+    def test_phase7_reset_preserves_synthetic_demo_artifacts(self):
+        synthetic_dir = PROJECT_ROOT / "data" / "synthetic_demo"
+
+        def snapshot() -> dict[str, int]:
+            return {p.name: p.stat().st_size for p in synthetic_dir.glob("*") if p.is_file()}
+
+        before = snapshot()
+        self._reset_phase7_run_state("20260736")
+        self.assertEqual(before, snapshot())
 
     def test_health_endpoint(self):
         with urlopen(self._url("/health")) as response:
