@@ -122,7 +122,10 @@ class TestChurnService(unittest.TestCase):
 
     def _prepare_phase7_draft_fixture(self, run_date: str) -> None:
         self._reset_phase7_run_state(run_date)
-        from evidence.phase7_artifacts import namespaced_artifact_path, resolve_phase7_mode
+        from evidence.phase7_artifacts import (
+            namespaced_artifact_path,
+            resolve_phase7_mode,
+        )
 
         draft_source = PROJECT_ROOT / "tests" / "fixtures" / "phase7_action_drafts_20260727.json"
         draft_target = namespaced_artifact_path(
