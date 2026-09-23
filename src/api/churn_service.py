@@ -47,6 +47,16 @@ GOVERNANCE_MONITOR_PATH = DATA_PROCESSED_DIR / "phase4_governance_monitor_latest
 SYNTHETIC_ACTIONS_PATH = DATA_PROCESSED_DIR / "retention_actions_synthetic_30d.parquet"
 SYNTHETIC_DEMO_MANIFEST_PATH = PROJECT_ROOT / "data" / "synthetic_demo" / "synthetic_demo__phase7_manifest_20260727.json"
 
+# Synthetic-demo placeholder: NO derivado de ningun modelo entrenado real.
+# La forma replica el contrato real (ver churn_scoring.py / metadata del bundle real),
+# pero los cortes de score son valores de marcador, no percentiles calculados.
+# Documentado en CI_reproducibility_incident_2026-09-23.md, familia 8.2.
+_SYNTHETIC_RISK_THRESHOLDS = {
+    "high_min_score": 0.90,
+    "medium_min_score": 0.75,
+    "quantile_policy": {"low": "0%-50%", "medium": "50%-80%", "high": "80%-100%"},
+}
+
 
 def _is_synthetic_demo_mode() -> bool:
     return str(os.getenv("MODE") or "").strip().lower() == "synthetic_demo"
@@ -409,7 +419,7 @@ def _latest_scoring_metadata() -> dict:
                 "model_version": str(manifest.get("bundle_version") or "synthetic_demo"),
                 "pipeline_tag": str(manifest.get("manifest_version") or "synthetic_demo"),
                 "source_file": SYNTHETIC_DEMO_MANIFEST_PATH.name,
-                "risk_thresholds": None,
+                "risk_thresholds": _SYNTHETIC_RISK_THRESHOLDS,
             }
         explainability_path = _latest_explainability_path()
         fallback_tag = explainability_path.stem.split("_")[-1]

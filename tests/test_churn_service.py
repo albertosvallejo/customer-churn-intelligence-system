@@ -113,7 +113,7 @@ class TestChurnService(unittest.TestCase):
 
     def _prepare_phase7_draft_fixture(self, run_date: str) -> None:
         self._reset_phase7_run_state(run_date)
-        draft_source = PROJECT_ROOT / "data" / "processed" / "phase7_action_drafts_20260727.json"
+        draft_source = PROJECT_ROOT / "tests" / "fixtures" / "phase7_action_drafts_20260727.json"
         draft_target = PROJECT_ROOT / "data" / "processed" / f"phase7_action_drafts_{run_date}.json"
         draft_target.write_text(draft_source.read_text(encoding="utf-8"), encoding="utf-8")
 

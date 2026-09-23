@@ -25,13 +25,15 @@ class TestPhase7ProposalBuilder(unittest.TestCase):
         self.assertEqual(claims, ["42%", "3"])
 
     def test_resolve_openai_runtime_config_reads_project_env(self):
+        from unittest.mock import patch
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
             (root / ".env").write_text(
                 "OPENAI_API_KEY=test-key\nPHASE7_OPENAI_MODEL=test-model\nPHASE7_OPENAI_TEMPERATURE=0.2\n",
                 encoding="utf-8",
             )
-            runtime = resolve_openai_runtime_config(project_root=root)
+            with patch.dict(os.environ, {}, clear=True):
+                runtime = resolve_openai_runtime_config(project_root=root)
             self.assertEqual(runtime["api_key"], "test-key")
             self.assertEqual(runtime["model"], "test-model")
             self.assertEqual(runtime["temperature"], 0.2)
@@ -252,7 +254,7 @@ class TestPhase7ProposalBuilder(unittest.TestCase):
                     },
                 }
 
-            payload = build_and_write_action_drafts(project_root=root, run_date="20260727", synthesizer=fake_synthesizer)
+            payload = build_and_write_action_drafts(project_root=root, run_date="20260727", synthesizer=fake_synthesizer, mode="real")
             self.assertEqual(payload["draft_count"], "2")
             self.assertEqual(payload["validated_count"], "2")
 
