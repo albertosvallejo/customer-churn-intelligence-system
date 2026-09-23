@@ -31,6 +31,7 @@ class TestChurnService(unittest.TestCase):
         cls._tmpdir = tempfile.TemporaryDirectory()
         cls._previous_app_env = os.environ.get("APP_ENV")
         os.environ["APP_ENV"] = "test"
+        cls._previous_mode = os.environ.pop("MODE", None)
         os.environ["CHURN_DB_URL"] = f"sqlite:///{Path(cls._tmpdir.name) / 'test_ops.sqlite'}"
         os.environ["PHASE7_REVIEW_TOKEN"] = "phase7-test-token"
         churn_service.DEFAULT_DB_URL = os.environ["CHURN_DB_URL"]
@@ -80,6 +81,8 @@ class TestChurnService(unittest.TestCase):
             os.environ.pop("APP_ENV", None)
         else:
             os.environ["APP_ENV"] = cls._previous_app_env
+        if cls._previous_mode is not None:
+            os.environ["MODE"] = cls._previous_mode
         cls._tmpdir.cleanup()
 
     def _url(self, path: str) -> str:
@@ -89,32 +92,45 @@ class TestChurnService(unittest.TestCase):
         return {"Content-Type": "application/json", "X-Phase7-Token": os.environ["PHASE7_REVIEW_TOKEN"]}
 
     def _reset_phase7_run_state(self, run_date: str) -> None:
-        processed = PROJECT_ROOT / "data" / "processed"
-        reports = PROJECT_ROOT / "reports"
-        for path in [
-            processed / f"phase7_action_drafts_{run_date}.json",
-            processed / f"phase7_integrated_actions_{run_date}.json",
-            processed / f"phase7_kpi_status_{run_date}.json",
-            processed / f"phase7_n8n_payload_{run_date}.json",
-            reports / f"phase7_integrated_actions_{run_date}.md",
-            reports / f"phase7_kpi_status_{run_date}.md",
-        ]:
-            if path.exists():
-                path.unlink()
+        from evidence.phase7_artifacts import (
+            REAL_MODE,
+            SYNTHETIC_DEMO_MODE,
+            namespaced_artifact_path,
+            namespaced_report_path,
+        )
 
-        parquet_paths = [
-            processed / "phase7_action_history_log.parquet",
-            processed / "phase7_stat_launch_requests.parquet",
-            processed / "phase7_stat_test_runs.parquet",
-        ]
-        for parquet_path in parquet_paths:
-            if parquet_path.exists():
-                parquet_path.unlink()
+        for mode in (REAL_MODE, SYNTHETIC_DEMO_MODE):
+            for path in [
+                namespaced_artifact_path(PROJECT_ROOT, f"phase7_action_drafts_{run_date}.json", mode),
+                namespaced_artifact_path(PROJECT_ROOT, f"phase7_integrated_actions_{run_date}.json", mode),
+                namespaced_artifact_path(PROJECT_ROOT, f"phase7_kpi_status_{run_date}.json", mode),
+                namespaced_artifact_path(PROJECT_ROOT, f"phase7_n8n_payload_{run_date}.json", mode),
+                namespaced_report_path(PROJECT_ROOT, f"phase7_integrated_actions_{run_date}.md", mode),
+                namespaced_report_path(PROJECT_ROOT, f"phase7_kpi_status_{run_date}.md", mode),
+            ]:
+                if path.exists():
+                    path.unlink()
+
+            for parquet_name in (
+                "phase7_action_history_log.parquet",
+                "phase7_stat_launch_requests.parquet",
+                "phase7_stat_test_runs.parquet",
+            ):
+                parquet_path = namespaced_artifact_path(PROJECT_ROOT, parquet_name, mode)
+                if parquet_path.exists():
+                    parquet_path.unlink()
 
     def _prepare_phase7_draft_fixture(self, run_date: str) -> None:
         self._reset_phase7_run_state(run_date)
+        from evidence.phase7_artifacts import namespaced_artifact_path, resolve_phase7_mode
+
         draft_source = PROJECT_ROOT / "tests" / "fixtures" / "phase7_action_drafts_20260727.json"
-        draft_target = PROJECT_ROOT / "data" / "processed" / f"phase7_action_drafts_{run_date}.json"
+        draft_target = namespaced_artifact_path(
+            PROJECT_ROOT,
+            f"phase7_action_drafts_{run_date}.json",
+            resolve_phase7_mode(None),
+        )
+        draft_target.parent.mkdir(parents=True, exist_ok=True)
         draft_target.write_text(draft_source.read_text(encoding="utf-8"), encoding="utf-8")
 
     def test_health_endpoint(self):
