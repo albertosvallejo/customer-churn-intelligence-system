@@ -180,7 +180,16 @@ class TestChurnService(unittest.TestCase):
         self.assertEqual(len(payload["records"]), payload["record_count"])
 
     def test_thresholds_latest_endpoint(self):
-        with urlopen(self._url("/thresholds/latest")) as response:
+        # setUpClass elimina MODE y /models/ esta en .gitignore: en CI no hay bundle real,
+        # asi que sin MODE=synthetic_demo el servicio cae al fallback con
+        # risk_thresholds=None. Con el bundle real (local) este tiene prioridad.
+        # _latest_scoring_metadata esta cacheada: se limpia antes y despues.
+        churn_service._latest_scoring_metadata.cache_clear()
+        self.addCleanup(churn_service._latest_scoring_metadata.cache_clear)
+        with (
+            patch.dict(os.environ, {"MODE": "synthetic_demo"}),
+            urlopen(self._url("/thresholds/latest")) as response,
+        ):
             self.assertEqual(response.status, 200)
             payload = json.loads(response.read().decode("utf-8"))
         self.assertEqual(payload["status"], "ok")
