@@ -9,14 +9,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose%20Ready-2496ED.svg)](https://www.docker.com/)
 [![License](https://img.shields.io/badge/Code%20License-MIT-blue.svg)](LICENSE)
 [![Workflow](https://img.shields.io/badge/Workflow-Spec--Driven%20%2B%20Human%20Supervision-005090.svg)](#development-methodology)
-
-> **Verification at a glance**
-> - Clean-source validation in a controlled local sandbox: `CLEAN_SOURCE_REPRODUCIBILITY=PASS` (run `churn-clean-source-20260919-091935`, 2026-09-19, executed by the Project Author; [evidence](reports/reproducibility/CLEAN_SOURCE_SANDBOX_EVIDENCE_20260919.md)).
-> - Clean-room test suite: 158 passed ([evidence](reports/reproducibility/04_cp4_cleanroom_attempt_20260811.md)).
-> - External Docker validation: verified ([status](reports/reproducibility/CP5_EXTERNAL_VALIDATION_STATUS.md)).
-> - Fresh-checkout CI workflow: included in the project and backed by locally validated test, Docker and end-to-end reproducibility checks; see `.github/workflows/ci-reproducibility.yml`.
->
-> Scope, dates and limits of each check are in [Reproducibility Status](#reproducibility-status).
+[![CI Reproducibility](https://github.com/albertosvallejo/customer-churn-intelligence-system/actions/workflows/ci-reproducibility.yml/badge.svg)](https://github.com/albertosvallejo/customer-churn-intelligence-system/actions/workflows/ci-reproducibility.yml)
 
 ---
 
@@ -94,6 +87,14 @@ Requires real-world validation
 - validated production retention ROI;
 - enterprise-scale production operations;
 - uplift / incremental-response modeling.
+
+### Reproducibility and verification
+
+The public release has been validated at several levels, with scope, dates and limits of each check detailed in [Reproducibility Status](#reproducibility-status):
+
+- **GitHub Actions:** the fresh-checkout CI workflow passes end-to-end on GitHub's own infrastructure ([commit `58daf4b`, run #8, 2026-09-24](https://github.com/albertosvallejo/customer-churn-intelligence-system/commit/58daf4b)).
+- **Controlled local sandbox:** clean-source reproducibility verified before publication (2026-09-19), and independently re-verified with no live API tokens at zero real cost (2026-10-03).
+- **Clean-room tests and external Docker validation:** 158 tests passed from a clean copy, and the Docker runtime was validated externally.
 
 For a faster business-oriented overview:
 
@@ -217,7 +218,8 @@ docker compose up --build
 Reproducibility is evidenced at two levels:
 
 1. **Clean-source validation in a controlled local sandbox (before publication).** The Project Author ran a clean-source validation independently of GitHub: run `churn-clean-source-20260919-091935`, `CLEAN_SOURCE_REPRODUCIBILITY=PASS`, with no project fixes applied. It was executed on 2026-09-19 against the source as it stood on that date. It is the author's own run, so it is supporting evidence rather than an independent audit. See the [evidence summary](reports/reproducibility/CLEAN_SOURCE_SANDBOX_EVIDENCE_20260919.md), including the pack's stage-by-stage results and SHA-256 manifest.
-2. **Fresh-checkout CI workflow.** Included in the project and backed by locally validated test, Docker and end-to-end reproducibility checks. See the workflow described below.
+2. **Fresh-checkout CI workflow.** VERIFIED / PASS on GitHub Actions itself - see [commit `58daf4b`, run #8, 2026-09-24](https://github.com/albertosvallejo/customer-churn-intelligence-system/commit/58daf4b): the full chain below ran green end-to-end on GitHub's own infrastructure against a fresh checkout of the published repository. See the workflow described below.
+3. **Sandbox reproducibility validation (no live API tokens).** An independent controlled sandbox run validated GitHub-CI parity and full reproducibility (build, startup, readiness, project verification, cleanup) against the corrected source, at zero real API cost. See `reports/reproducibility/validation_report.md` (sandbox run `churn-rerun-readiness-20261003-235655`, 2026-10-03).
 
 **Release integrity / manifest-controlled package validation** complements that evidence for the curated public release contents.
 
@@ -377,7 +379,7 @@ See also:
 - Production retention ROI is not claimed as validated.
 - Enterprise-scale production operations are outside the demonstrated scope.
 - The analytical and portfolio evidence remain intentionally separated from private operational traceability.
-- Clean-source reproducibility was verified before publication through a controlled local sandbox runner (run `churn-clean-source-20260919-091935`, 2026-09-19), which is the Project Author's own run. The complementary clean-checkout CI workflow is included in the project and backed by locally validated test, Docker and end-to-end reproducibility checks (see `.github/workflows/ci-reproducibility.yml`).
+- Clean-source reproducibility was verified before publication through a controlled local sandbox runner (run `churn-clean-source-20260919-091935`, 2026-09-19), which is the Project Author's own run. The complementary clean-checkout CI workflow has since run on GitHub Actions itself and passed end-to-end - see [commit `58daf4b`, run #8, 2026-09-24](https://github.com/albertosvallejo/customer-churn-intelligence-system/commit/58daf4b).
 - External evidence coverage is intentionally pilot-scoped. The REACT capability currently uses validated free-access external sources; broader production retrieval would normally integrate paid research/search or retrieval services where justified by the business case.
 - Enterprise identity and access management are outside the pilot scope. Baseline safeguards are implemented, but production-grade IAM, RBAC, SSO, enterprise audit controls and broader organizational security hardening are not part of the current portfolio implementation.
 
@@ -392,7 +394,8 @@ See also:
 | Phase 7 synthetic determinism | Verified | `docs/reproducibility/REPRODUCIBILITY.md`, public synthetic manifests |
 | Clean-source reproducibility (local sandbox) | VERIFIED | controlled local sandbox validation run `churn-clean-source-20260919-091935` (clean-source job, no project fixes applied, 2026-09-19) — the Project Author's own pre-publication run, independent of GitHub Actions; not re-executable from this repository alone; see `reports/reproducibility/CLEAN_SOURCE_SANDBOX_EVIDENCE_20260919.md` |
 | Release curation | PASS | manifest-controlled public package + curated release copy |
-| GitHub Actions clean-checkout CI | Defined and locally validated by supporting evidence | `.github/workflows/ci-reproducibility.yml` defines the fresh-checkout validation flow; its test, Docker and end-to-end reproducibility stages are backed by local validation evidence |
+| GitHub Actions clean-checkout CI | VERIFIED / PASS on GitHub Actions | [commit `58daf4b`, run #8, 2026-09-24](https://github.com/albertosvallejo/customer-churn-intelligence-system/commit/58daf4b) - lint, tests, synthetic-demo manifest validation, fake-LLM smoke, Docker build/up, health check and HTTP smoke all passed on GitHub's own infrastructure against a fresh checkout |
+| Sandbox reproducibility validation (no API tokens) | VERIFIED / PASS | `reports/reproducibility/validation_report.md`, sandbox run `churn-rerun-readiness-20261003-235655` (2026-10-03) - `GITHUB_CI_PARITY=PASS`, `REPRODUCIBILITY=PASS`, real API cost $0 |
 | Real-customer business validation | Not claimed | outside the demonstrated public scope |
 
 ### Documentation bundle for this phase
@@ -1387,7 +1390,7 @@ This README documents the current public narrative as a long-form technical reco
 → **Phase 7 governed reporting + REACT loop**
 → **curated reproducible public release**
 
-Phase 7 is closed. The public release is curated. README final editorial review is PASS. Clean-source reproducibility was verified before publication through the controlled local sandbox (see Reproducibility Status), and the clean-checkout CI workflow is included in the project with locally validated supporting evidence for its test, Docker and end-to-end reproducibility stages.
+Phase 7 is closed. The public release is curated. README final editorial review is PASS. Clean-source reproducibility was verified before publication through the controlled local sandbox (see Reproducibility Status), and the clean-checkout CI workflow has since passed end-to-end on GitHub Actions itself (commit `58daf4b`, run #8, 2026-09-24), independently corroborated by a token-free sandbox reproducibility run (`churn-rerun-readiness-20261003-235655`, 2026-10-03).
 
 ## License & Contact
 
@@ -1416,9 +1419,9 @@ If you reuse the source code, attribution is appreciated and covered by the MIT 
 
 ---
 
-**Last Updated:** September 21, 2026  
+**Last Updated:** October 7, 2026  
 **Canonical artifact line:** 20260506 · canonical V2C line · Phase 2 orchestration validated · Phase 4 benchmark closure · Phase 5 closed · Phase 6 closed · Phase 7 closed · reproducible portfolio release
-**Status:** NB01–NB09 Complete · Phase 2 Complete · Phase 4 Closed at Portfolio/Demo Benchmark Level · Phase 5 Closed · Phase 6 Closed · Phase 7 CLOSED · Clean-source reproducibility VERIFIED via controlled local sandbox (2026-09-19) · Published on GitHub · Clean-checkout CI workflow included and backed by local validation evidence (see `.github/workflows/ci-reproducibility.yml`)
+**Status:** NB01–NB09 Complete · Phase 2 Complete · Phase 4 Closed at Portfolio/Demo Benchmark Level · Phase 5 Closed · Phase 6 Closed · Phase 7 CLOSED · Clean-source reproducibility VERIFIED via controlled local sandbox (2026-09-19) · Published on GitHub · GitHub Actions clean-checkout CI VERIFIED / PASS end-to-end (commit `58daf4b`, run #8, 2026-09-24) · token-free sandbox reproducibility corroboration PASS (run `churn-rerun-readiness-20261003-235655`, 2026-10-03)
 
 ---
 
